@@ -757,14 +757,18 @@ class TaskTemplate : public ObjectHandle {
     explicit TaskTemplate(ocrGuid_t guid) : ObjectHandle(guid) {}
 
     typedef typename internal::FnInfo<F>::Result Result;
-    static_assert(std::is_same<void, Result>::value ||
-                          std::is_base_of<ObjectHandle, Result>::value,
-                  "User's task function must return an OCR object type.");
+    typedef typename internal::Unpack<Result>::Parameter Parameter;
+    static_assert(
+            std::is_same<void, Result>::value ||
+                    std::is_same<NullHandle, Result>::value ||
+                    std::is_same<DatablockHandle<Parameter>, Result>::value,
+            "User's task function must return void, NullHandle, or "
+            "DatablockHandle<?>.");
 };
 
 namespace internal {
 
-typedef DataHandle<void>(DummyTaskFnType)(Datablock<int>, Datablock<double>);
+typedef DatablockHandle<void>(DummyTaskFnType)(Datablock<int>, Datablock<double>);
 
 typedef Task<DummyTaskFnType> DummyTaskType;
 
