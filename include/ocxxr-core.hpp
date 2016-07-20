@@ -673,6 +673,8 @@ class TaskBuilder<F, void(Params...), void(Args...)> {
         static_assert(
                 sizeof...(Deps) == sizeof...(Args) || sizeof...(Deps) == 0,
                 "Must either provide all dependence args or none.");
+        ASSERT(flags_ != EDT_PROP_FINISH &&
+               "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
                 reinterpret_cast<u64 *>(&params)..., nullptr};
