@@ -46,3 +46,15 @@ Testing
     $ ./test-all.sh
     ...
     > All 24 tests passed!
+
+
+Support
+-------
+
+For more documentation, please visit the ocxxr wiki:
+
+https://github.com/DaoWen/ocxxr/wiki
+
+To report bugs or ask for other support, please open an issue on GitHub:
+
+https://github.com/DaoWen/ocxxr/issues
