@@ -105,14 +105,14 @@ template <typename T, typename... Ts>
 static inline T *NewIn(internal::dballoc::DatablockAllocator arena,
                        Ts &&... args) {
     auto mem = arena.allocate(sizeof(T));
-    return new (mem) T(std::forward<Ts>(args)...);
+    return ::new (mem) T(std::forward<Ts>(args)...);
 }
 
 // Constructor helper for NewArray
 
 template <typename T, typename NoInit = void>
 struct TypeInitializer {
-    static inline void init(T &target) { new (&target) T(); }
+    static inline void init(T &target) { ::new (::std::addressof(target)) T(); }
 };
 
 template <typename T>

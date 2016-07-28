@@ -785,6 +785,6 @@ static_assert(internal::IsLegalHandle<internal::DummyTemplateType>::value,
 }  // namespace ocxxr
 
 #define OCXXR_TEMPLATE_FOR(fn_ptr) \
-    ocxxr::TaskTemplate<decltype(fn_ptr)>::Create<fn_ptr>();
+    ::ocxxr::TaskTemplate<decltype(fn_ptr)>::Create<fn_ptr>();
 
 #endif  // OCXXR_CORE_HPP_
