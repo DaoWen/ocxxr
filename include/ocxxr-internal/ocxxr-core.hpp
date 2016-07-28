@@ -1,96 +1,7 @@
 #ifndef OCXXR_CORE_HPP_
 #define OCXXR_CORE_HPP_
 
-#include <functional>
-#include <type_traits>
-
-#ifndef OCXXR_USING_CXX14
-// Need C++11 compatibility
-#include <ocxxr-cxx11-compat.hpp>
-#endif
-
 namespace ocxxr {
-
-namespace internal {
-
-#ifdef OCXXR_USING_CXX14
-// std::is_trivially_copyable is missing in GCC-4
-template <typename T>
-using IsTriviallyCopyable = std::is_trivially_copyable<T>;
-
-// index_sequence is C++14 only
-template <size_t... Indices>
-using IndexSeq = std::index_sequence<Indices...>;
-template <size_t N>
-using MakeIndexSeq = std::make_index_sequence<N>;
-template <typename... T>
-using IndexSeqFor = std::index_sequence_for<T...>;
-#endif
-
-template <typename T>
-struct IsLegalHandle {
-    // Check if a type can be reinterpreted to/from ocrGuid_t
-    static constexpr bool value =
-            IsTriviallyCopyable<T>::value && sizeof(T) == sizeof(ocrGuid_t);
-};
-
-// TODO - move all of these to a "util" namespace
-// (nothing in "internal" should be in the public API)
-template <bool condition, typename T = int>
-using EnableIf = typename std::enable_if<condition, T>::type;
-
-template <typename T, typename U = int>
-using EnableIfVoid = EnableIf<std::is_same<void, T>::value, U>;
-
-template <typename T, typename U = int>
-using EnableIfNotVoid = EnableIf<!std::is_same<void, T>::value, U>;
-
-template <typename T, typename U, typename V = int>
-using EnableIfBaseOf = EnableIf<std::is_base_of<T, U>::value, V>;
-
-template <typename T, typename U, typename V = int>
-using EnableIfSame = EnableIf<std::is_same<T, U>::value, V>;
-
-template <typename T, typename U, typename V = int>
-using EnableIfNotSame = EnableIf<!std::is_same<T, U>::value, V>;
-
-// Check error status of C API call
-inline void OK(u8 status) { ASSERT(status == 0); }
-}  // namespace internal
-
-//! Abstract base class for all OCR objects with GUIDs.
-class ObjectHandle {
- public:
-    ocrGuid_t guid() const { return guid_; }
-
-    bool is_null() const { return ocrGuidIsNull(guid_); }
-    bool is_uninitialized() const { return ocrGuidIsUninitialized(guid_); }
-    bool is_error() const { return ocrGuidIsError(guid_); }
-
-    bool operator==(const ObjectHandle &rhs) const {
-        return ocrGuidIsEq(guid_, rhs.guid_);
-    }
-    bool operator!=(const ObjectHandle &rhs) const { return !(*this == rhs); }
-
-    bool operator<(const ObjectHandle &rhs) const {
-        return ocrGuidIsLt(guid_, rhs.guid_);
-    }
-    bool operator>(const ObjectHandle &rhs) const { return rhs < *this; }
-    bool operator<=(const ObjectHandle &rhs) const { return !(*this > rhs); }
-    bool operator>=(const ObjectHandle &rhs) const { return !(*this < rhs); }
-
-    ~ObjectHandle() = default;
-
- protected:
-    explicit ObjectHandle(ocrGuid_t guid) : guid_(guid) {}
-
- private:
-    ocrGuid_t guid_;
-};
-
-static_assert(internal::IsLegalHandle<ObjectHandle>::value,
-              "ObjectHandle must be castable to/from ocrGuid_t.");
-
 template <typename T>
 class DataHandle : public ObjectHandle {
  public:
@@ -110,56 +21,6 @@ void Shutdown() { ocrShutdown(); }
 
 void Abort(u8 error_code) { ocrAbort(error_code); }
 
-class Hint {
- public:
-    Hint(ocrHintType_t hint_type) {
-        internal::OK(ocrHintInit(&hint_, hint_type));
-    }
-
-    Hint &Set(ocrHintProp_t prop, u64 value) {
-        internal::OK(ocrSetHintValue(&hint_, prop, value));
-        return *this;
-    }
-
-    Hint &Unset(ocrHintProp_t prop) {
-        internal::OK(ocrUnsetHintValue(&hint_, prop));
-        return *this;
-    }
-
-    u64 Get(ocrHintProp_t prop) {
-        u64 value;
-        internal::OK(ocrGetHintValue(&hint_, prop, &value));
-        return value;
-    }
-
-    Hint &AttachTo(ObjectHandle object) {
-        internal::OK(ocrSetHint(object.guid(), &hint_));
-        return *this;
-    }
-
-    Hint &ReadFrom(ObjectHandle object) {
-        internal::OK(ocrGetHint(object.guid(), &hint_));
-        return *this;
-    }
-
-    const ocrHint_t *internal() const { return &hint_; }
-
-    ocrHint_t *internal() { return &hint_; }
-
- private:
-    ocrHint_t hint_;
-};
-
-class TaskHint : public Hint {
- public:
-    TaskHint() : Hint(OCR_HINT_EDT_T) {}
-};
-
-class DatablockHint : public Hint {
- public:
-    DatablockHint() : Hint(OCR_HINT_DB_T) {}
-};
-
 //! Datablocks
 template <typename T>
 class DatablockHandle : public DataHandle<T> {
@@ -167,10 +28,10 @@ class DatablockHandle : public DataHandle<T> {
     explicit DatablockHandle(u64 count)
             : DataHandle<T>(Init(sizeof(T) * count, false, nullptr)) {}
 
-    explicit DatablockHandle(u64 count, const Hint &hint)
+    explicit DatablockHandle(u64 count, const DatablockHint &hint)
             : DataHandle<T>(Init(sizeof(T) * count, false, &hint)) {}
 
-    explicit DatablockHandle(T **data_ptr, u64 count, const Hint *hint)
+    explicit DatablockHandle(T **data_ptr, u64 count, const DatablockHint *hint)
             : DataHandle<T>(Init(data_ptr, sizeof(T) * count, true, hint)) {}
 
     void Destroy() const { internal::OK(ocrDbDestroy(this->guid())); }
@@ -184,13 +45,13 @@ class DatablockHandle : public DataHandle<T> {
     }
 
  protected:
-    static ocrGuid_t Init(u64 bytes, const Hint *hint) {
+    static ocrGuid_t Init(u64 bytes, const DatablockHint *hint) {
         T **data_ptr;
         return Init(&data_ptr, bytes, false, hint);
     }
 
     static ocrGuid_t Init(T **data_ptr, u64 bytes, bool acquire,
-                          const Hint *hint) {
+                          const DatablockHint *hint) {
         ocrGuid_t guid;
         const u16 flags = acquire ? DB_PROP_NONE : DB_PROP_NO_ACQUIRE;
         // TODO - open bug for adding const qualifiers in OCR C API.
@@ -211,7 +72,7 @@ class Datablock : public AcquiredData {
  public:
     explicit Datablock(u64 count) : Datablock(nullptr, count, nullptr) {}
 
-    explicit Datablock(u64 count, const Hint &hint)
+    explicit Datablock(u64 count, const DatablockHint &hint)
             : Datablock(nullptr, count, &hint) {}
 
     // This version gets called from the task setup code
@@ -242,7 +103,7 @@ class Datablock : public AcquiredData {
     operator DatablockHandle<T>() const { return handle_; }
 
  private:
-    Datablock(T *tmp, u64 count, const Hint *hint)
+    Datablock(T *tmp, u64 count, const DatablockHint *hint)
             : handle_(&tmp, count, hint), data_(tmp) {}
 
     const DatablockHandle<T> handle_;
@@ -595,13 +456,13 @@ class Task<Ret(Args...)> : public ObjectHandle {
 
     // TODO - add support for hints, output events, etc
     Task(Event<R> *out_event, ocrGuid_t task_template, u64 paramv[],
-         ocrGuid_t depv[], const Hint *hint, u16 flags)
+         ocrGuid_t depv[], const TaskHint *hint, u16 flags)
             : ObjectHandle(Init(out_event, task_template, paramv, depv, hint,
                                 flags)) {}
 
  private:
     static ocrGuid_t Init(Event<R> *out_event, ocrGuid_t task_template,
-                          u64 paramv[], ocrGuid_t depv[], const Hint *hint,
+                          u64 paramv[], ocrGuid_t depv[], const TaskHint *hint,
                           u16 flags) {
         ocrGuid_t guid;
         ocrGuid_t *out_guid = reinterpret_cast<ocrGuid_t *>(out_event);
@@ -639,7 +500,7 @@ class TaskBuilder<F, void(Params...), void(Args...)> {
                   "Task function must have a consistent type.");
     typedef typename internal::Unpack<Ret>::Parameter R;
 
-    TaskBuilder(ocrGuid_t template_guid, const Hint *hint, u16 flags)
+    TaskBuilder(ocrGuid_t template_guid, const TaskHint *hint, u16 flags)
             : template_guid_(template_guid), hint_(hint), flags_(flags) {}
 
     Task<F> CreateTask(Params... params, DataHandleOf<Args>... deps) {
@@ -717,7 +578,7 @@ class TaskBuilder<F, void(Params...), void(Args...)> {
     }
 
     const ocrGuid_t template_guid_;
-    const Hint *const hint_;
+    const TaskHint *const hint_;
     const u16 flags_;
 };
 
@@ -746,7 +607,7 @@ class TaskTemplate : public ObjectHandle {
         return TaskBuilder<F, PF, DF>(this->guid(), nullptr, flags);
     }
 
-    TaskBuilder<F, PF, DF> operator()(const Hint &hint,
+    TaskBuilder<F, PF, DF> operator()(const TaskHint &hint,
                                       u16 flags = EDT_PROP_NONE) const {
         return TaskBuilder<F, PF, DF>(this->guid(), &hint, flags);
     }
@@ -770,20 +631,20 @@ class TaskTemplate : public ObjectHandle {
 
 namespace internal {
 
-typedef DatablockHandle<void>(DummyTaskFnType)(Datablock<int>, Datablock<double>);
+typedef DatablockHandle<void>(DummyTaskFnType)(Datablock<int>,
+                                               Datablock<double>);
 
 typedef Task<DummyTaskFnType> DummyTaskType;
 
 typedef TaskTemplate<DummyTaskFnType> DummyTemplateType;
 
-}  // namespace internal
-
-static_assert(internal::IsLegalHandle<internal::DummyTaskType>::value,
+static_assert(IsLegalHandle<DummyTaskType>::value,
               "Task must be castable to/from ocrGuid_t.");
 
-static_assert(internal::IsLegalHandle<internal::DummyTemplateType>::value,
+static_assert(IsLegalHandle<DummyTemplateType>::value,
               "TaskTemplate must be castable to/from ocrGuid_t.");
 
+}  // namespace internal
 }  // namespace ocxxr
 
 #define OCXXR_TEMPLATE_FOR(fn_ptr) \

@@ -154,10 +154,11 @@ class ArenaHandle : public DatablockHandle<ArenaState> {
  public:
     explicit ArenaHandle(u64 bytes) : ArenaHandle(nullptr, bytes, nullptr) {}
 
-    explicit ArenaHandle(u64 bytes, const Hint &hint)
+    explicit ArenaHandle(u64 bytes, const DatablockHint &hint)
             : ArenaHandle(nullptr, bytes, &hint) {}
 
-    explicit ArenaHandle(ArenaState **data_ptr, u64 bytes, const Hint *hint)
+    explicit ArenaHandle(ArenaState **data_ptr, u64 bytes,
+                         const DatablockHint *hint)
             : DatablockHandle<ArenaState>(data_ptr, bytes + sizeof(ArenaState),
                                           hint) {
         ASSERT(bytes >= sizeof(T) &&
@@ -176,7 +177,7 @@ class Arena {
  public:
     explicit Arena(u64 bytes) : Arena(nullptr, bytes, nullptr) {}
 
-    explicit Arena(u64 bytes, const Hint &hint)
+    explicit Arena(u64 bytes, const DatablockHint &hint)
             : Arena(nullptr, bytes, &hint) {}
 
     // This version gets called from the task setup code
@@ -225,7 +226,7 @@ class Arena {
     friend void SetImplicitArena(Arena<U> arena);
 
  private:
-    Arena(ArenaState *tmp, u64 bytes, const Hint *hint)
+    Arena(ArenaState *tmp, u64 bytes, const DatablockHint *hint)
             : handle_(&tmp, bytes, hint), state_(tmp) {
         internal::dballoc::AllocatorDbInit(state_, bytes);
     }
