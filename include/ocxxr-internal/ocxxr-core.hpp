@@ -14,6 +14,31 @@ static_assert(internal::IsLegalHandle<DataHandle<int>>::value,
 // base class for Datablock, etc
 class AcquiredData {};
 
+class NullHandle : public ObjectHandle {
+ public:
+    NullHandle() : ObjectHandle(NULL_GUID) {}
+
+    // auto-convert NullHandle to any ObjectHandle type
+    template <typename T, internal::EnableIfBaseOf<ObjectHandle, T> = 0>
+    operator T() const {
+        static_assert(internal::IsLegalHandle<T>::value,
+                      "Only use NullHandle for simple handle types.");
+        // Note: this is a bit ugly, but I think it does what the user
+        // would expect it to do, i.e., this NullHandle is actually
+        // converted to whatever T-type handle they wanted.
+        return *reinterpret_cast<T *>(const_cast<NullHandle *>(this));
+    }
+
+    // auto-convert NullHandle to Datablock, etc
+    template <typename T, internal::EnableIfBaseOf<AcquiredData, T> = 0>
+    operator T() const {
+        return T(nullptr);
+    }
+};
+
+static_assert(internal::IsLegalHandle<NullHandle>::value,
+              "NullHandle must be castable to/from ocrGuid_t.");
+
 void Shutdown() { ocrShutdown(); }
 
 void Abort(u8 error_code) { ocrAbort(error_code); }
@@ -107,20 +132,23 @@ class Datablock : public AcquiredData {
     T *const data_;
 };
 
-// TODO - Add Arenas (and ArenaHandles)
-// They'll be very similar to the Datablock classes,
-// but incorporate code from my db-alloc repo.
+struct Properties {
+    static constexpr u16 kLabeled = GUID_PROP_IS_LABELED;
+    static constexpr u16 kChecked = GUID_PROP_IS_LABELED | GUID_PROP_CHECK;
+    static constexpr u16 kBlocking = GUID_PROP_BLOCK;
+};
 
 //! Events
 template <typename T>
 class Event : public DataHandle<T> {
  public:
-    static constexpr bool kIsVoid = std::is_same<void, T>::value;
-    static constexpr u16 kDefaultFlags =
-            kIsVoid ? EVT_PROP_NONE : EVT_PROP_TAKES_ARG;
+    explicit Event(ocrEventTypes_t type, u16 flags = 0,
+                   Event self = NullHandle())
+            : DataHandle<T>(Init(type, flags, nullptr, self)) {}
 
-    explicit Event(ocrEventTypes_t type, u16 flags = kDefaultFlags)
-            : DataHandle<T>(Init(type, flags)) {}
+    explicit Event(ocrEventTypes_t type, u16 flags, ocrEventParams_t params,
+                   Event self = NullHandle())
+            : DataHandle<T>(Init(type, flags, &params, self)) {}
 
     explicit Event(ocrGuid_t guid = NULL_GUID) : DataHandle<T>(guid) {}
 
@@ -141,9 +169,21 @@ class Event : public DataHandle<T> {
     }
 
  private:
-    static ocrGuid_t Init(ocrEventTypes_t type, u16 flags) {
-        ocrGuid_t guid;
-        internal::OK(ocrEventCreate(&guid, type, flags));
+    static constexpr bool kIsVoid = std::is_same<void, T>::value;
+    static constexpr u16 kDefaultFlags =
+            kIsVoid ? EVT_PROP_NONE : EVT_PROP_TAKES_ARG;
+
+    static ocrGuid_t Init(ocrEventTypes_t type, u16 flags,
+                          ocrEventParams_t *params, Event self) {
+        ocrGuid_t guid = self.guid();
+        ASSERT(self.is_null() == !(flags & Properties::kLabeled) &&
+               "Provide self handle iff this is labeled event.");
+        flags |= kDefaultFlags;  // Add data mode to flags
+        if (params) {
+            internal::OK(ocrEventCreateParams(&guid, type, flags, params));
+        } else {
+            internal::OK(ocrEventCreate(&guid, type, flags));
+        }
         return guid;
     }
 };
@@ -154,7 +194,8 @@ static_assert(internal::IsLegalHandle<Event<int>>::value,
 template <typename T>
 class OnceEvent : public Event<T> {
  public:
-    explicit OnceEvent() : Event<T>(OCR_EVENT_ONCE_T) {}
+    explicit OnceEvent(u16 flags = 0, Event<T> self = NullHandle())
+            : Event<T>(OCR_EVENT_ONCE_T, flags, self) {}
 };
 
 static_assert(internal::IsLegalHandle<OnceEvent<int>>::value,
@@ -163,7 +204,8 @@ static_assert(internal::IsLegalHandle<OnceEvent<int>>::value,
 template <typename T>
 class IdempotentEvent : public Event<T> {
  public:
-    explicit IdempotentEvent() : Event<T>(OCR_EVENT_IDEM_T) {}
+    explicit IdempotentEvent(u16 flags = 0, Event<T> self = NullHandle())
+            : Event<T>(OCR_EVENT_IDEM_T, flags, self) {}
 };
 
 static_assert(internal::IsLegalHandle<IdempotentEvent<int>>::value,
@@ -172,7 +214,8 @@ static_assert(internal::IsLegalHandle<IdempotentEvent<int>>::value,
 template <typename T>
 class StickyEvent : public Event<T> {
  public:
-    explicit StickyEvent() : Event<T>(OCR_EVENT_STICKY_T) {}
+    explicit StickyEvent(u16 flags = 0, Event<T> self = NullHandle())
+            : Event<T>(OCR_EVENT_STICKY_T, flags, self) {}
 };
 
 static_assert(internal::IsLegalHandle<StickyEvent<int>>::value,
@@ -181,39 +224,32 @@ static_assert(internal::IsLegalHandle<StickyEvent<int>>::value,
 template <typename T>
 class LatchEvent : public Event<T> {
  public:
-    explicit LatchEvent() : Event<T>(OCR_EVENT_LATCH_T) {}
-    // TODO - SatisfySlot
-    // TODO - Up
-    // TODO - Down
+    explicit LatchEvent(u16 flags = 0, Event<T> self = NullHandle())
+            : Event<T>(OCR_EVENT_LATCH_T, flags, self) {}
+
+    explicit LatchEvent(u64 count, u16 flags = 0, Event<T> self = NullHandle())
+            : Event<T>(OCR_EVENT_LATCH_T, flags, MakeParams(count), self) {}
+
+    void Up() {
+        internal::OK(ocrEventSatisfySlot(this->guid(), NULL_GUID,
+                                         OCR_EVENT_LATCH_INCR_SLOT));
+    }
+
+    void Down() {
+        internal::OK(ocrEventSatisfySlot(this->guid(), NULL_GUID,
+                                         OCR_EVENT_LATCH_DECR_SLOT));
+    }
+
+ private:
+    static ocrEventParams_t MakeParams(u64 count) {
+        ocrEventParams_t params;
+        params.EVENT_LATCH.counter = count;
+        return params;
+    }
 };
 
 static_assert(internal::IsLegalHandle<LatchEvent<int>>::value,
               "LatchEvent must be castable to/from ocrGuid_t.");
-
-class NullHandle : public ObjectHandle {
- public:
-    NullHandle() : ObjectHandle(NULL_GUID) {}
-
-    // auto-convert NullHandle to any ObjectHandle type
-    template <typename T, internal::EnableIfBaseOf<ObjectHandle, T> = 0>
-    operator T() const {
-        static_assert(internal::IsLegalHandle<T>::value,
-                      "Only use NullHandle for simple handle types.");
-        // Note: this is a bit ugly, but I think it does what the user
-        // would expect it to do, i.e., this NullHandle is actually
-        // converted to whatever T-type handle they wanted.
-        return *reinterpret_cast<T *>(const_cast<NullHandle *>(this));
-    }
-
-    // auto-convert NullHandle to Datablock, etc
-    template <typename T, internal::EnableIfBaseOf<AcquiredData, T> = 0>
-    operator T() const {
-        return T(nullptr);
-    }
-};
-
-static_assert(internal::IsLegalHandle<NullHandle>::value,
-              "NullHandle must be castable to/from ocrGuid_t.");
 
 // Used only for placing "holes" in a task dependence list
 template <typename T>

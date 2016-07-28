@@ -6,6 +6,10 @@
 #endif
 
 extern "C" {
+#define ENABLE_EXTENSION_PARAMS_EVT
+#define ENABLE_EXTENSION_COUNTED_EVT
+#define ENABLE_EXTENSION_CHANNEL_EVT
+#define ENABLE_EXTENSION_LABELING
 #include <ocr.h>
 }
 
@@ -24,6 +28,8 @@ extern "C" {
 #include <ocxxr-internal/ocxxr-hint.hpp>
 
 #include <ocxxr-internal/ocxxr-core.hpp>
+
+#include <ocxxr-internal/ocxxr-extension.hpp>
 
 #include <ocxxr-internal/ocxxr-arena.hpp>
 
