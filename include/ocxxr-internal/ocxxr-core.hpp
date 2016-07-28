@@ -4,9 +4,6 @@
 namespace ocxxr {
 template <typename T>
 class DataHandle : public ObjectHandle {
- public:
-    ~DataHandle() = default;
-
  protected:
     explicit DataHandle(ocrGuid_t guid) : ObjectHandle(guid) {}
 };
@@ -613,8 +610,6 @@ class TaskTemplate : public ObjectHandle {
     }
 
     void Destroy() const { internal::OK(ocrEdtTemplateDestroy(this->guid())); }
-
-    ~TaskTemplate() = default;
 
  private:
     explicit TaskTemplate(ocrGuid_t guid) : ObjectHandle(guid) {}
