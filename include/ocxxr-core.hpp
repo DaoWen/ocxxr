@@ -233,6 +233,8 @@ class Datablock : public AcquiredData {
 
     T *data_ptr() const { return data_; }
 
+    bool is_null() const { return data_ == nullptr; }
+
     DatablockHandle<T> handle() const { return handle_; }
 
     void Release() const { internal::OK(ocrDbRelease(this->guid())); }

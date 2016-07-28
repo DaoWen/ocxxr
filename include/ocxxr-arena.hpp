@@ -75,7 +75,8 @@ void AllocatorDbInit(void *dbPtr, size_t dbSize);
 }  // namespace internal
 
 // ArenaState management
-using ArenaState = internal::dballoc::DatablockAllocator;
+using ArenaState = internal::dballoc::DbArenaHeader;
+using AllocatorState = internal::dballoc::DatablockAllocator;
 
 namespace internal {
 namespace dballoc {
@@ -88,7 +89,7 @@ static inline void SetCurrentArena(void *dbPtr) {
     internal::dballoc::AllocatorSetDb(dbPtr);
 }
 
-static inline ArenaState &GetCurrentArena(void) {
+static inline DatablockAllocator &GetCurrentAllocator(void) {
     return internal::dballoc::AllocatorGet();
 }
 
@@ -195,7 +196,13 @@ class Arena {
         return *data_ptr();
     }
 
+    void *base_ptr() const { return state_; }
+
+    s64 size() const { return state_->size; }
+
     T *data_ptr() const { return &internal::dballoc::GetArenaRoot<T>(state_); }
+
+    bool is_null() const { return state_ == nullptr; }
 
     ArenaHandle<T> handle() const { return handle_; }
 
