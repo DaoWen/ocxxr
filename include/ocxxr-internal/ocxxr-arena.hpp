@@ -173,7 +173,7 @@ class ArenaHandle : public DatablockHandle<ArenaState> {
 };
 
 template <typename T>
-class Arena {
+class Arena : public AcquiredData {
  public:
     explicit Arena(u64 bytes) : Arena(nullptr, bytes, nullptr) {}
 

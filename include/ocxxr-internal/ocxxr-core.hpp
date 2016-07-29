@@ -2,6 +2,9 @@
 #define OCXXR_CORE_HPP_
 
 namespace ocxxr {
+
+/// @brief Base class for all OCR objects which can carry data.
+/// @see DatablockHandle, Event
 template <typename T>
 class DataHandle : public ObjectHandle {
  protected:
@@ -11,9 +14,21 @@ class DataHandle : public ObjectHandle {
 static_assert(internal::IsLegalHandle<DataHandle<int>>::value,
               "DataHandle must be castable to/from ocrGuid_t.");
 
-// base class for Datablock, etc
+/// @brief Base class for Datablock objects with acquired data pointers.
+///
+/// A datablock that has been acquired by a task consists
+/// of both its handle (GUID), as well as a pointer to
+/// the datablock's current base memory address.
+/// @see Datablock, Arena
 class AcquiredData {};
 
+/// @brief The null placeholder object.
+///
+/// Represents the absence of an OCR object.
+/// Corresponds with the NULL_GUID type in OCR.
+///
+/// A NullHandle can be automatically converted to any other ObjectHandle type,
+/// allowing its use as a "null" placeholder for any OCR object type.
 class NullHandle : public ObjectHandle {
  public:
     NullHandle() : ObjectHandle(NULL_GUID) {}
@@ -39,14 +54,30 @@ class NullHandle : public ObjectHandle {
 static_assert(internal::IsLegalHandle<NullHandle>::value,
               "NullHandle must be castable to/from ocrGuid_t.");
 
+/// Shut down OCR.
 void Shutdown() { ocrShutdown(); }
 
+/// Abort OCR execution with an error code.
 void Abort(u8 error_code) { ocrAbort(error_code); }
 
-//! Datablocks
+/// Handle for an OCR datablock object.
 template <typename T>
 class DatablockHandle : public DataHandle<T> {
  public:
+    explicit DatablockHandle(ocrGuid_t guid = NULL_GUID)
+            : DataHandle<T>(guid) {}
+
+    /// @brief Create a datablock, but don't acquire it.
+    /// @param[in] count Number of elements of type `T`
+    ///                  that this datablock can hold.
+    static DatablockHandle<T> Create(u64 count = 1) {
+        return DatablockHandle<T>(count);
+    }
+
+    /// Destroy this datablock.
+    void Destroy() const { internal::OK(ocrDbDestroy(this->guid())); }
+
+ protected:
     explicit DatablockHandle(u64 count)
             : DataHandle<T>(Init(sizeof(T) * count, false, nullptr)) {}
 
@@ -56,17 +87,6 @@ class DatablockHandle : public DataHandle<T> {
     explicit DatablockHandle(T **data_ptr, u64 count, const DatablockHint *hint)
             : DataHandle<T>(Init(data_ptr, sizeof(T) * count, true, hint)) {}
 
-    void Destroy() const { internal::OK(ocrDbDestroy(this->guid())); }
-
-    explicit DatablockHandle(ocrGuid_t guid = NULL_GUID)
-            : DataHandle<T>(guid) {}
-
-    // create a datablock, but don't acquire it.
-    static DatablockHandle<T> Create(u64 count = 1) {
-        return DatablockHandle<T>(count);
-    }
-
- protected:
     static ocrGuid_t Init(u64 bytes, const DatablockHint *hint) {
         T **data_ptr;
         return Init(&data_ptr, bytes, false, hint);
@@ -89,42 +109,74 @@ class DatablockHandle : public DataHandle<T> {
 static_assert(internal::IsLegalHandle<DatablockHandle<int>>::value,
               "DatablockHandle must be castable to/from ocrGuid_t.");
 
+/// @brief An acquired OCR datablock.
+///
+/// An acquired datablock consists of both the datablock's global handle
+/// and the current base address of its data.
+///
+/// Datablocks can be automatically converted to the corresponding
+/// DatablockHandle type, allowing Datablocks to be used directly
+/// to satisfy events or set up task dependencies.
 template <typename T>
 class Datablock : public AcquiredData {
  public:
+    // default constructor: creates null datablock
+    explicit Datablock(std::nullptr_t np = nullptr)
+            : handle_(NULL_GUID), data_(np) {}
+
+    // this constructor gets called from the task setup code
+    explicit Datablock(ocrEdtDep_t dep)
+            : handle_(dep.guid), data_(static_cast<T *>(dep.ptr)) {}
+
+    /// @brief Create and acquire a datablock.
+    /// @param[in] count Number of elements of type `T`
+    ///                  that this datablock can hold.
+    static Datablock<T> Create(u64 count = 1) { return Datablock<T>(count); }
+
+    /// Get a reference to this datablock's internal data.
+    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
+    U &data() const {
+        // The template type U is only here to get enable_if to work.
+        static_assert(std::is_same<T, U>::value, "Template types must match.");
+        ASSERT(data_ != nullptr);
+        return *data_;
+    }
+
+    /// Synonym for #data().
+    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
+    U &operator*() const {
+        return data<U>();
+    }
+
+    /// Get the datablock's current base address pointer.
+    T *data_ptr() const { return data_; }
+
+    /// Shorthand access to members of #data_ptr().
+    T *operator->() const { return data_ptr(); }
+
+    /// Null datablock predicate.
+    bool is_null() const { return data_ == nullptr; }
+
+    /// Get this datablock's global handle.
+    DatablockHandle<T> handle() const { return handle_; }
+
+    /// @brief Release the datablock.
+    ///
+    /// The datablock release operation is a key concept
+    /// in the OCR memory model. A datablock must be released
+    /// in order to guarantee that any previous writes to the datablock
+    /// are made visible before any subsequent synchronization operations.
+    void Release() const { internal::OK(ocrDbRelease(this->guid())); }
+
+    // automatic type conversion to DatablockHandle
+    operator DatablockHandle<T>() const { return handle_; }
+
+ private:
     explicit Datablock(u64 count) : Datablock(nullptr, count, nullptr) {}
 
     explicit Datablock(u64 count, const DatablockHint &hint)
             : Datablock(nullptr, count, &hint) {}
 
-    // This version gets called from the task setup code
-    explicit Datablock(ocrEdtDep_t dep)
-            : handle_(dep.guid), data_(static_cast<T *>(dep.ptr)) {}
-
-    // create empty datablock
-    explicit Datablock(std::nullptr_t np = nullptr)
-            : handle_(NULL_GUID), data_(np) {}
-
-    static Datablock<T> Create(u64 count = 1) { return Datablock<T>(count); }
-
-    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
-    U &data() const {
-        // The template type U is only here to get enable_if to work.
-        static_assert(std::is_same<T, U>::value, "Template types must match.");
-        return *data_;
-    }
-
-    T *data_ptr() const { return data_; }
-
-    bool is_null() const { return data_ == nullptr; }
-
-    DatablockHandle<T> handle() const { return handle_; }
-
-    void Release() const { internal::OK(ocrDbRelease(this->guid())); }
-
-    operator DatablockHandle<T>() const { return handle_; }
-
- private:
     Datablock(T *tmp, u64 count, const DatablockHint *hint)
             : handle_(&tmp, count, hint), data_(tmp) {}
 
