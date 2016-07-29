@@ -10,11 +10,15 @@ namespace ocxxr {
 template <typename T>
 class CountedEvent : public Event<T> {
  public:
-    explicit CountedEvent(u64 count, u16 flags = 0,
-                          Event<T> self = NullHandle())
-            : Event<T>(OCR_EVENT_COUNTED_T, flags, MakeParams(count), self) {}
+    static CountedEvent Create(u64 count, u16 flags = 0,
+                               Event<T> self = NullHandle()) {
+        return CountedEvent(count, flags, self);
+    }
 
  private:
+    CountedEvent(u64 count, u16 flags, Event<T> self)
+            : Event<T>(OCR_EVENT_COUNTED_T, flags, MakeParams(count), self) {}
+
     static ocrEventParams_t MakeParams(u64 count) {
         ocrEventParams_t params;
         params.EVENT_COUNTED.nbDeps = count;
@@ -25,12 +29,15 @@ class CountedEvent : public Event<T> {
 template <typename T>
 class ChannelEvent : public Event<T> {
  public:
-    explicit ChannelEvent(u32 max_buffered, u16 flags = 0,
-                          Event<T> self = NullHandle())
-            : Event<T>(OCR_EVENT_CHANNEL_T, flags, MakeParams(max_buffered),
-                       self) {}
+    static ChannelEvent Create(u32 max_buffered, u16 flags = 0,
+                               Event<T> self = NullHandle()) {
+        return ChannelEvent(max_buffered, flags, self);
+    }
 
  private:
+    ChannelEvent(u32 max_buf, u16 flags, Event<T> self)
+            : Event<T>(OCR_EVENT_CHANNEL_T, flags, MakeParams(max_buf), self) {}
+
     static ocrEventParams_t MakeParams(u32 max_buffered) {
         ocrEventParams_t params;
         params.EVENT_CHANNEL.maxGen = max_buffered;

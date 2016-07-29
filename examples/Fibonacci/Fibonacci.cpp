@@ -65,8 +65,8 @@ void Fib(FibParams &params) {
 
     } else {  // Recursive case (parallel)
         // Set up recursive tasks' output handles
-        auto lhs_output = ocxxr::OnceEvent<u64>();
-        auto rhs_output = ocxxr::OnceEvent<u64>();
+        auto lhs_output = ocxxr::OnceEvent<u64>::Create();
+        auto rhs_output = ocxxr::OnceEvent<u64>::Create();
 
         // Set up continuation
         FibContinuationParams continuation_params = {params.n, params.output};
@@ -104,7 +104,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     auto continuation_template = OCXXR_TEMPLATE_FOR(FibContinuation);
 
     // Set up the root computation task's output handle
-    auto root_output = ocxxr::OnceEvent<u64>();
+    auto root_output = ocxxr::OnceEvent<u64>::Create();
 
     // Set up the finalization task
     auto result_template = OCXXR_TEMPLATE_FOR(CheckResult);

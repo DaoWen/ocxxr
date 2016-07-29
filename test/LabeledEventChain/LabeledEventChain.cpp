@@ -24,7 +24,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     auto task_template = OCXXR_TEMPLATE_FOR(ChainedTask);
     auto range = RangeType::Create(kTaskCount);
     for (u32 i = 0; i < kTaskCount; i++) {
-        auto event = ocxxr::StickyEvent<u32>(flags, range[i]);
+        auto event = ocxxr::StickyEvent<u32>::Create(flags, range[i]);
         task_template().CreateTask(range, event);
     }
     // Start with task 1

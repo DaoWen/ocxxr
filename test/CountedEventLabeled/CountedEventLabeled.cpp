@@ -17,7 +17,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     // 1st counted labeled event
     PRINTF("Creating labeled counted event...\n");
     auto range = ocxxr::HandleRange<ocxxr::CountedEvent<void>>::Create(1);
-    auto event1 = ocxxr::CountedEvent<void>(kDepCount, flags, range[0]);
+    auto event1 = ocxxr::CountedEvent<void>::Create(kDepCount, flags, range[0]);
     event1.Satisfy();
     // consumer tasks
     PRINTF("Creating tasks...\n");
@@ -27,7 +27,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     }
     usleep(100000);
     // 2nd counted labeled event
-    auto event2 = ocxxr::CountedEvent<void>(kDepCount, flags, range[0]);
+    auto event2 = ocxxr::CountedEvent<void>::Create(kDepCount, flags, range[0]);
     event2.Satisfy();
     // end task
     auto end_template = OCXXR_TEMPLATE_FOR(EndTask);

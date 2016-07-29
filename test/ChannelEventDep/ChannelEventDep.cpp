@@ -15,7 +15,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     constexpr s32 kTaskCount = 5;
     // Good latch
     PRINTF("Creating channel event...\n");
-    auto channel = ocxxr::ChannelEvent<s32>(kTaskCount + 1);
+    auto channel = ocxxr::ChannelEvent<s32>::Create(kTaskCount + 1);
     // Good task should run when latch triggers
     PRINTF("Creating tasks...\n");
     auto task_template = OCXXR_TEMPLATE_FOR(ConsumerTask);

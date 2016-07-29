@@ -67,6 +67,9 @@ class DatablockHandle : public DataHandle<T> {
     explicit DatablockHandle(ocrGuid_t guid = NULL_GUID)
             : DataHandle<T>(guid) {}
 
+    DatablockHandle(T **data_ptr, u64 count, const DatablockHint *hint)
+            : DataHandle<T>(Init(data_ptr, sizeof(T) * count, true, hint)) {}
+
     /// @brief Create a datablock, but don't acquire it.
     /// @param[in] count Number of elements of type `T`
     ///                  that this datablock can hold.
@@ -81,11 +84,8 @@ class DatablockHandle : public DataHandle<T> {
     explicit DatablockHandle(u64 count)
             : DataHandle<T>(Init(sizeof(T) * count, false, nullptr)) {}
 
-    explicit DatablockHandle(u64 count, const DatablockHint &hint)
+    DatablockHandle(u64 count, const DatablockHint &hint)
             : DataHandle<T>(Init(sizeof(T) * count, false, &hint)) {}
-
-    explicit DatablockHandle(T **data_ptr, u64 count, const DatablockHint *hint)
-            : DataHandle<T>(Init(data_ptr, sizeof(T) * count, true, hint)) {}
 
     static ocrGuid_t Init(u64 bytes, const DatablockHint *hint) {
         T **data_ptr;
@@ -174,7 +174,7 @@ class Datablock : public AcquiredData {
  private:
     explicit Datablock(u64 count) : Datablock(nullptr, count, nullptr) {}
 
-    explicit Datablock(u64 count, const DatablockHint &hint)
+    Datablock(u64 count, const DatablockHint &hint)
             : Datablock(nullptr, count, &hint) {}
 
     Datablock(T *tmp, u64 count, const DatablockHint *hint)
@@ -194,15 +194,17 @@ struct Properties {
 template <typename T>
 class Event : public DataHandle<T> {
  public:
-    explicit Event(ocrEventTypes_t type, u16 flags = 0,
-                   Event self = NullHandle())
-            : DataHandle<T>(Init(type, flags, nullptr, self)) {}
-
-    explicit Event(ocrEventTypes_t type, u16 flags, ocrEventParams_t params,
-                   Event self = NullHandle())
-            : DataHandle<T>(Init(type, flags, &params, self)) {}
-
     explicit Event(ocrGuid_t guid = NULL_GUID) : DataHandle<T>(guid) {}
+
+    static Event Create(ocrEventTypes_t type, u16 flags = 0,
+                        Event self = NullHandle()) {
+        return Event(type, flags, self);
+    }
+
+    static Event Create(ocrEventTypes_t type, u16 flags,
+                        ocrEventParams_t params, Event self) {
+        return Event(type, flags, params, self);
+    }
 
     void Destroy() const { internal::OK(ocrEventDestroy(this->guid())); }
 
@@ -219,6 +221,14 @@ class Event : public DataHandle<T> {
         constexpr ocrDbAccessMode_t mode = DB_DEFAULT_MODE;
         internal::OK(ocrAddDependence(src.guid(), this->guid(), slot, mode));
     }
+
+ protected:
+    Event(ocrEventTypes_t type, u16 flags, Event self)
+            : DataHandle<T>(Init(type, flags, nullptr, self)) {}
+
+    Event(ocrEventTypes_t type, u16 flags, ocrEventParams_t params,
+          Event self = NullHandle())
+            : DataHandle<T>(Init(type, flags, &params, self)) {}
 
  private:
     static constexpr bool kIsVoid = std::is_same<void, T>::value;
@@ -246,7 +256,12 @@ static_assert(internal::IsLegalHandle<Event<int>>::value,
 template <typename T>
 class OnceEvent : public Event<T> {
  public:
-    explicit OnceEvent(u16 flags = 0, Event<T> self = NullHandle())
+    static OnceEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
+        return OnceEvent(flags, self);
+    }
+
+ private:
+    OnceEvent(u16 flags, Event<T> self)
             : Event<T>(OCR_EVENT_ONCE_T, flags, self) {}
 };
 
@@ -256,7 +271,12 @@ static_assert(internal::IsLegalHandle<OnceEvent<int>>::value,
 template <typename T>
 class IdempotentEvent : public Event<T> {
  public:
-    explicit IdempotentEvent(u16 flags = 0, Event<T> self = NullHandle())
+    static IdempotentEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
+        return IdempotentEvent(flags, self);
+    }
+
+ private:
+    IdempotentEvent(u16 flags, Event<T> self)
             : Event<T>(OCR_EVENT_IDEM_T, flags, self) {}
 };
 
@@ -266,7 +286,12 @@ static_assert(internal::IsLegalHandle<IdempotentEvent<int>>::value,
 template <typename T>
 class StickyEvent : public Event<T> {
  public:
-    explicit StickyEvent(u16 flags = 0, Event<T> self = NullHandle())
+    static StickyEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
+        return StickyEvent(flags, self);
+    }
+
+ private:
+    StickyEvent(u16 flags, Event<T> self)
             : Event<T>(OCR_EVENT_STICKY_T, flags, self) {}
 };
 
@@ -276,11 +301,14 @@ static_assert(internal::IsLegalHandle<StickyEvent<int>>::value,
 template <typename T>
 class LatchEvent : public Event<T> {
  public:
-    explicit LatchEvent(u16 flags = 0, Event<T> self = NullHandle())
-            : Event<T>(OCR_EVENT_LATCH_T, flags, self) {}
+    static LatchEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
+        return LatchEvent(flags, self);
+    }
 
-    explicit LatchEvent(u64 count, u16 flags = 0, Event<T> self = NullHandle())
-            : Event<T>(OCR_EVENT_LATCH_T, flags, MakeParams(count), self) {}
+    static LatchEvent Create(u64 up_count, u16 flags = 0,
+                             Event<T> self = NullHandle()) {
+        return LatchEvent(up_count, flags, self);
+    }
 
     void Up() {
         internal::OK(ocrEventSatisfySlot(this->guid(), NULL_GUID,
@@ -293,6 +321,12 @@ class LatchEvent : public Event<T> {
     }
 
  private:
+    LatchEvent(u16 flags, Event<T> self)
+            : Event<T>(OCR_EVENT_LATCH_T, flags, self) {}
+
+    LatchEvent(u64 up_count, u16 flags, Event<T> self)
+            : Event<T>(OCR_EVENT_LATCH_T, flags, MakeParams(up_count), self) {}
+
     static ocrEventParams_t MakeParams(u64 count) {
         ocrEventParams_t params;
         params.EVENT_LATCH.counter = count;

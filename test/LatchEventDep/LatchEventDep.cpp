@@ -16,11 +16,11 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     // Good latch
     constexpr u64 kCount = 2;
     PRINTF("Creating good latch(%" PRIu64 ")...\n", kCount);
-    auto good_latch = ocxxr::LatchEvent<void>(kCount);
+    auto good_latch = ocxxr::LatchEvent<void>::Create(kCount);
     // Bad latch (never triggered)
     constexpr u64 kBadCount = kCount + 1;
     PRINTF("Creating bad latch(%" PRIu64 ")...\n", kBadCount);
-    auto bad_latch = ocxxr::LatchEvent<void>(kBadCount);
+    auto bad_latch = ocxxr::LatchEvent<void>::Create(kBadCount);
     // Bad task should not run because its latch is never triggered
     PRINTF("Creating bad task...\n");
     auto bad_template = OCXXR_TEMPLATE_FOR(BadTask);
