@@ -1,6 +1,8 @@
 #ifndef OCXXR_CORE_HPP_
 #define OCXXR_CORE_HPP_
 
+#include <iterator>
+
 namespace ocxxr {
 
 /// @brief Base class for all OCR objects which can carry data.
@@ -216,7 +218,8 @@ class Event : public DataHandle<T> {
         internal::OK(ocrEventSatisfy(this->guid(), data.guid()));
     }
 
-    void AddDependence(DataHandle<T> src) const {
+    /// @brief Set up a dependence from this event to a data source.
+    void DependOn(DataHandle<T> src) const {
         constexpr u32 slot = 0;
         constexpr ocrDbAccessMode_t mode = DB_DEFAULT_MODE;
         internal::OK(ocrAddDependence(src.guid(), this->guid(), slot, mode));
@@ -543,6 +546,15 @@ class TaskBuilder;
 template <typename F>
 class Task;
 
+/// Datablock access modes
+struct AccessMode {
+    static constexpr ocrDbAccessMode_t kDefault = DB_DEFAULT_MODE;
+    static constexpr ocrDbAccessMode_t kExclusive = DB_MODE_EW;
+    static constexpr ocrDbAccessMode_t kConstant = DB_MODE_CONST;
+    static constexpr ocrDbAccessMode_t kReadWrite = DB_MODE_RW;
+    static constexpr ocrDbAccessMode_t kReadOnly = DB_MODE_RO;
+};
+
 template <typename Ret, typename... Args>
 class Task<Ret(Args...)> : public ObjectHandle {
  public:
@@ -554,9 +566,15 @@ class Task<Ret(Args...)> : public ObjectHandle {
 
     void Destroy() const { internal::OK(ocrEdtDestroy(this->guid())); }
 
+    /// @brief Set up a dependence from one of this task's input slots to a data
+    /// source.
+    ///
+    /// @tparam slot Index of the slot for the dependency.
+    /// @param[in] src Data source for the dependency.
+    /// @param[in] mode Access mode requested for the input data.
     template <u32 slot, typename U>
-    const Task<F> &AddDependence(
-            U src, ocrDbAccessMode_t mode = DB_DEFAULT_MODE) const {
+    const Task<F> &DependOn(
+            U src, ocrDbAccessMode_t mode = AccessMode::kDefault) const {
         namespace i = internal;
         static_assert(slot < kDepc, "Slot too high.");
         constexpr u32 dep_slot = slot + i::FnInfo<F>::kDepStart;
@@ -565,6 +583,22 @@ class Task<Ret(Args...)> : public ObjectHandle {
                       "Dependence argument must match slot type.");
         ocrGuid_t src_guid = static_cast<DataHandleOf<U>>(src).guid();
         internal::OK(ocrAddDependence(src_guid, this->guid(), slot, mode));
+        return *this;
+    }
+
+    /// @brief Set up dependences from a range of this task's input slots to a
+    /// range of data sources.
+    ///
+    /// @tparam start_slot Index of the slot for the first dependency.
+    /// @tparam until_slot Index one past the slot for the last dependency.
+    /// @param[in] src_start Iterator-like object of the data source for the
+    ///                      first dependency.
+    /// @param[in] mode Access mode requested for the input data.
+    template <u32 start_slot, u32 until_slot, typename U>
+    const Task<F> &DependOnRange(
+            U src_start, ocrDbAccessMode_t mode = AccessMode::kDefault) const {
+        DependOnRangeHelper<start_slot, until_slot, Task<F>, U>::Recur(
+                this, src_start, mode);
         return *this;
     }
 
@@ -593,6 +627,22 @@ class Task<Ret(Args...)> : public ObjectHandle {
                      depv, flags, raw_hint, out_guid);
         return guid;
     }
+
+    template <u32 start_slot, u32 until_slot, typename T, typename U,
+              bool stop = start_slot >= until_slot>
+    struct DependOnRangeHelper {
+        static void Recur(const T *task, U src_start, ocrDbAccessMode_t mode) {
+            task->template DependOn<start_slot>(*src_start, mode);
+            auto src_next = std::next(src_start);
+            DependOnRangeHelper<start_slot + 1, until_slot, T, U>::Recur(
+                    task, src_next, mode);
+        }
+    };
+
+    template <u32 start_slot, u32 until_slot, typename T, typename U>
+    struct DependOnRangeHelper<start_slot, until_slot, T, U, true> {
+        static void Recur(const T *, U, ocrDbAccessMode_t) {}
+    };
 };
 
 template <typename F>
