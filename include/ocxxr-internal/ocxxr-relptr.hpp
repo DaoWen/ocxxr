@@ -1,7 +1,6 @@
 #ifndef OCXXR_RELPTR_HPP_
 #define OCXXR_RELPTR_HPP_
 
-#include <cassert>
 #include <cstddef>
 
 namespace ocxxr {
@@ -73,10 +72,26 @@ struct PointerNester<T, 0> {
     typedef T Type;
 };
 
+template <typename T>
+struct PointerConvertor;
+
+template <typename T>
+struct PointerConvertor<T *> {
+    typedef RelPtr<T> Type;
+};
+
+template <typename T>
+struct PointerConvertor<T **> {
+    typedef RelPtr<typename PointerConvertor<T *>::Type> Type;
+};
+
 }  // namespace internal
 
 template <typename T, unsigned N>
 using NestedRelPtr = typename internal::PointerNester<T, N>::Type;
+
+template <typename T>
+using RelPtrFor = typename internal::PointerConvertor<T>::Type;
 
 }  // namespace ocxxr
 
