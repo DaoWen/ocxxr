@@ -192,28 +192,34 @@ struct Properties {
     static constexpr u16 kBlocking = GUID_PROP_BLOCK;
 };
 
-//! Events
+/// @brief Base class for OCR events.
+///
+/// To create an event, use one of the derived event sub-types
+/// (e.g., OnceEvent or StickyEvent) rather than this abstract type.
+/// However, when an event is stored in a struct, or passed as an argument,
+/// the specific type of the event is often not needed, and this abstract
+/// Event type can be used instead.
 template <typename T>
 class Event : public DataHandle<T> {
  public:
     explicit Event(ocrGuid_t guid = NULL_GUID) : DataHandle<T>(guid) {}
 
-    static Event Create(ocrEventTypes_t type, u16 flags = 0,
-                        Event self = NullHandle()) {
-        return Event(type, flags, self);
-    }
-
-    static Event Create(ocrEventTypes_t type, u16 flags,
-                        ocrEventParams_t params, Event self) {
-        return Event(type, flags, params, self);
-    }
-
+    /// Destroy this event.
     void Destroy() const { internal::OK(ocrEventDestroy(this->guid())); }
 
+    /// @brief Satisfy this event (with nothing).
+    ///
+    /// Satisfy the event, passing a null handle (NULL_GUID) as the payload.
+    /// This function is useful for control-only events (i.e., Event<void>).
     void Satisfy() const {
         internal::OK(ocrEventSatisfy(this->guid(), NULL_GUID));
     }
 
+    /// @brief Satisfy this event with a datablock.
+    ///
+    /// @param[in] src Handle for the datablock used to satisfy the event.
+    ///
+    /// Note: To chain two events together, use #AddDependence instead.
     void Satisfy(DatablockHandle<T> data) const {
         internal::OK(ocrEventSatisfy(this->guid(), data.guid()));
     }
@@ -259,6 +265,7 @@ static_assert(internal::IsLegalHandle<Event<int>>::value,
 template <typename T>
 class OnceEvent : public Event<T> {
  public:
+    /// Create a "once"-type event.
     static OnceEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
         return OnceEvent(flags, self);
     }
@@ -274,6 +281,7 @@ static_assert(internal::IsLegalHandle<OnceEvent<int>>::value,
 template <typename T>
 class IdempotentEvent : public Event<T> {
  public:
+    /// Create an "idempotent"-type event.
     static IdempotentEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
         return IdempotentEvent(flags, self);
     }
@@ -289,6 +297,7 @@ static_assert(internal::IsLegalHandle<IdempotentEvent<int>>::value,
 template <typename T>
 class StickyEvent : public Event<T> {
  public:
+    /// Create a "sticky"-type event.
     static StickyEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
         return StickyEvent(flags, self);
     }
@@ -304,20 +313,26 @@ static_assert(internal::IsLegalHandle<StickyEvent<int>>::value,
 template <typename T>
 class LatchEvent : public Event<T> {
  public:
+    /// Create a "latch"-type event.
     static LatchEvent Create(u16 flags = 0, Event<T> self = NullHandle()) {
         return LatchEvent(flags, self);
     }
 
+    /// @brief Create a "latch"-type event.
+    ///
+    /// @param[in] up_count Initial increment count of the latch.
     static LatchEvent Create(u64 up_count, u16 flags = 0,
                              Event<T> self = NullHandle()) {
         return LatchEvent(up_count, flags, self);
     }
 
+    /// Increase increment count of this latch by 1.
     void Up() {
         internal::OK(ocrEventSatisfySlot(this->guid(), NULL_GUID,
                                          OCR_EVENT_LATCH_INCR_SLOT));
     }
 
+    /// Increase decrement count of this latch by 1.
     void Down() {
         internal::OK(ocrEventSatisfySlot(this->guid(), NULL_GUID,
                                          OCR_EVENT_LATCH_DECR_SLOT));
@@ -340,10 +355,14 @@ class LatchEvent : public Event<T> {
 static_assert(internal::IsLegalHandle<LatchEvent<int>>::value,
               "LatchEvent must be castable to/from ocrGuid_t.");
 
-// Used only for placing "holes" in a task dependence list
+/// @brief The dependence-placeholder handle.
+///
+/// Used only for placing "holes" in a task's dependence list.
+/// @see ObjectHandle#is_uninitialized
 template <typename T>
 class UnknownDependence : public DataHandle<T> {
  public:
+    /// Create a dependence-placeholder handle.
     UnknownDependence() : DataHandle<T>(UNINITIALIZED_GUID) {}
 };
 
@@ -534,6 +553,9 @@ static_assert(internal::IsLegalHandle<DefaultDependence>::value,
 
 }  // namespace internal
 
+/// @cond DOXYGEN_IGNORE
+
+// TODO - should this be internal?
 template <typename T>
 using DataHandleOf = DataHandle<typename internal::Unpack<T>::Parameter>;
 
@@ -545,6 +567,8 @@ class TaskBuilder;
 
 template <typename F>
 class Task;
+
+/// @endcond
 
 /// Datablock access modes
 struct AccessMode {
@@ -751,6 +775,8 @@ class TaskBuilder<F, void(Params...), void(Args...)> {
     const u16 flags_;
 };
 
+/// @brief Task template.
+/// @see #OCXXR_TEMPLATE_FOR(fn_ptr)
 template <typename F>
 class TaskTemplate : public ObjectHandle {
  public:
@@ -760,6 +786,10 @@ class TaskTemplate : public ObjectHandle {
     // TODO - ensure that function's parameters are Datablocks
     // TODO - ensure that there is only one by-value parameter
     // (and update badTask2Params with the static assert message)
+    /// @brief Create a task template.
+    /// The macro #OCXXR_TEMPLATE_FOR(fn_ptr) is provided as a more
+    /// convenient way of invoking this function. (Invoking this function
+    /// directly is a bit verbose due to the complex template parameters.)
     template <F *user_fn>
     static TaskTemplate<F> Create() {
         ocrGuid_t guid;
@@ -813,8 +843,5 @@ static_assert(IsLegalHandle<DummyTemplateType>::value,
 
 }  // namespace internal
 }  // namespace ocxxr
-
-#define OCXXR_TEMPLATE_FOR(fn_ptr) \
-    ::ocxxr::TaskTemplate<decltype(fn_ptr)>::Create<fn_ptr>();
 
 #endif  // OCXXR_CORE_HPP_
