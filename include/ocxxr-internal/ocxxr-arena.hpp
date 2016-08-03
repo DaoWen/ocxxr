@@ -189,7 +189,9 @@ class Arena : public AcquiredData {
 
     // This version gets called from the task setup code
     explicit Arena(ocrEdtDep_t dep)
-            : handle_(dep.guid), state_(static_cast<ArenaState *>(dep.ptr)) {}
+            : handle_(dep.guid), state_(static_cast<ArenaState *>(dep.ptr)) {
+        internal::bookkeeping::AddDatablock(dep.guid, dep.ptr);
+    }
 
     // Create empty arena datablock
     explicit Arena(std::nullptr_t np = nullptr)
@@ -204,29 +206,38 @@ class Arena : public AcquiredData {
         return *data_ptr();
     }
 
+    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
+    U &operator*() const {
+        return data<U>();
+    }
+
     void *base_ptr() const { return state_; }
 
     s64 size() const { return state_->size; }
 
     T *data_ptr() const { return &internal::dballoc::GetArenaRoot<T>(state_); }
 
+    T *operator->() const { return data_ptr(); }
+
     bool is_null() const { return state_ == nullptr; }
 
     ArenaHandle<T> handle() const { return handle_; }
 
-    void Release() const { internal::OK(ocrDbRelease(this->guid())); }
+    void Release() const { internal::OK(ocrDbRelease(handle_.guid())); }
 
-    operator ArenaHandle<T>() const { return handle_; }
+    operator ArenaHandle<T>() const { return handle(); }
 
     template <typename U, typename... Args>
     U *New(Args &&... args) {
+        auto alloc = internal::dballoc::DatablockAllocator(state_);
         return internal::dballoc::NewIn<U, Args...>(
-                *state_, std::forward<Args>(args)...);
+                alloc, std::forward<Args>(args)...);
     }
 
     template <typename U>
     U *NewArray(size_t count) {
-        return internal::dballoc::NewArrayIn<U>(*state_, count);
+        auto alloc = internal::dballoc::DatablockAllocator(state_);
+        return internal::dballoc::NewArrayIn<U>(alloc, count);
     }
 
     template <typename U>
@@ -247,6 +258,15 @@ void SetImplicitArena(Arena<T> arena) {
     internal::dballoc::SetCurrentArena(arena.state_);
 }
 
+namespace internal {
+
+// FIXME - improve type handling for arenas
+template <typename T>
+struct Unpack<Arena<T>> {
+    typedef ArenaState Parameter;
+};
+
+}  // namespace internal
 }  // namespace ocxxr
 
 #endif  // OCXXR_ARENA_HPP_

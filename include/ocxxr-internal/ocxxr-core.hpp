@@ -105,6 +105,9 @@ class DatablockHandle : public DataHandle<T> {
         void **raw_data_ptr = reinterpret_cast<void **>(data_ptr);
         internal::OK(ocrDbCreate(&guid, raw_data_ptr, bytes, flags, raw_hint,
                                  NO_ALLOC));
+        if (acquire) {
+            internal::bookkeeping::AddDatablock(guid, *raw_data_ptr);
+        }
         return guid;
     }
 };
@@ -129,7 +132,9 @@ class Datablock : public AcquiredData {
 
     // this constructor gets called from the task setup code
     explicit Datablock(ocrEdtDep_t dep)
-            : handle_(dep.guid), data_(static_cast<T *>(dep.ptr)) {}
+            : handle_(dep.guid), data_(static_cast<T *>(dep.ptr)) {
+        internal::bookkeeping::AddDatablock(dep.guid, dep.ptr);
+    }
 
     /// @brief Create and acquire a datablock.
     /// @param[in] count Number of elements of type `T`
@@ -169,7 +174,10 @@ class Datablock : public AcquiredData {
     /// in the OCR memory model. A datablock must be released
     /// in order to guarantee that any previous writes to the datablock
     /// are made visible before any subsequent synchronization operations.
-    void Release() const { internal::OK(ocrDbRelease(this->guid())); }
+    void Release() const {
+        internal::OK(ocrDbRelease(handle_.guid()));
+        internal::bookkeeping::RemoveDatablock(handle_.guid());
+    }
 
     // automatic type conversion to DatablockHandle
     operator DatablockHandle<T>() const { return handle_; }

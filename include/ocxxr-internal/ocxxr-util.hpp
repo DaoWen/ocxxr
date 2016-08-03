@@ -1,6 +1,8 @@
 #ifndef OCXXR_UTIL_HPP_
 #define OCXXR_UTIL_HPP_
 
+#include <cstddef>
+
 namespace ocxxr {
 namespace internal {
 
@@ -53,6 +55,23 @@ inline void PushTaskState();
 
 // defined in ocxxr-task-state.hpp
 inline void PopTaskState();
+
+namespace bookkeeping {
+
+// defined in ocxxr-task-state.hpp
+inline void RemoveDatablock(ocrGuid_t guid);
+
+// defined in ocxxr-task-state.hpp
+inline void AddDatablock(ocrGuid_t guid, void *base_address);
+
+}  // namespace bookkeeping
+
+// defined in ocxxr-task-state.hpp
+inline ptrdiff_t AddressForGuid(ocrGuid_t);
+
+// defined in ocxxr-task-state.hpp
+inline void GuidOffsetForAddress(const void *target, const void *source,
+                                 ocrGuid_t *guid_out, ptrdiff_t *offset_out);
 
 }  // namespace internal
 }  // namespace ocxxr
