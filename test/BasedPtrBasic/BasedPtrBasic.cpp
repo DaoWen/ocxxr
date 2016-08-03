@@ -2,7 +2,7 @@
 
 constexpr int kPayload = 25;
 
-void ChildTask(ocxxr::Datablock<ocxxr::BasedPtr<int>> db, ocxxr::Arena<int>) {
+void ChildTask(ocxxr::Datablock<ocxxr::BasedPtr<int>> db, ocxxr::Arena<void>) {
     PRINTF("Running child task\n");
     int actual = **db;
     PRINTF("%d vs %d\n", actual, kPayload);
@@ -13,7 +13,7 @@ void ChildTask(ocxxr::Datablock<ocxxr::BasedPtr<int>> db, ocxxr::Arena<int>) {
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
     auto task_template = OCXXR_TEMPLATE_FOR(ChildTask);
     auto db = ocxxr::Datablock<ocxxr::BasedPtr<int>>::Create();
-    auto arena = ocxxr::Arena<int>::Create(100 * sizeof(int));
+    auto arena = ocxxr::Arena<void>::Create(100 * sizeof(int));
     for (int i = 0; i < 50; i++) {
         int* p = arena.New<int>(i);
         if (i == kPayload) {

@@ -85,8 +85,12 @@ inline void AllocatorDbInit(void *dbPtr, size_t dbSize) {
 }  // namespace internal
 
 // ArenaState management
-using ArenaState = internal::dballoc::DbArenaHeader;
 using AllocatorState = internal::dballoc::DatablockAllocator;
+
+template <typename T>
+struct ArenaState {
+    internal::dballoc::DbArenaHeader header;
+};
 
 namespace internal {
 namespace dballoc {
@@ -157,23 +161,23 @@ T *NewArray(size_t count) {
 }
 
 template <typename T>
-class ArenaHandle : public DatablockHandle<ArenaState> {
+class ArenaHandle : public DatablockHandle<ArenaState<T>> {
  public:
     explicit ArenaHandle(u64 bytes) : ArenaHandle(nullptr, bytes, nullptr) {}
 
     explicit ArenaHandle(u64 bytes, const DatablockHint &hint)
             : ArenaHandle(nullptr, bytes, &hint) {}
 
-    explicit ArenaHandle(ArenaState **data_ptr, u64 bytes,
+    explicit ArenaHandle(ArenaState<T> **data_ptr, u64 bytes,
                          const DatablockHint *hint)
-            : DatablockHandle<ArenaState>(data_ptr, bytes + sizeof(ArenaState),
-                                          hint) {
-        ASSERT(bytes >= sizeof(T) &&
+            : DatablockHandle<ArenaState<T>>(
+                      data_ptr, bytes + sizeof(ArenaState<T>), hint) {
+        ASSERT(bytes >= sizeof(internal::SizeOf<T>) &&
                "Arena must be big enough to hold root object");
     }
 
     explicit ArenaHandle(ocrGuid_t guid = NULL_GUID)
-            : DatablockHandle<ArenaState>(guid) {}
+            : DatablockHandle<ArenaState<T>>(guid) {}
 
     // create a datablock, but don't acquire it.
     static ArenaHandle Create(u64 bytes) { return ArenaHandle(bytes); }
@@ -189,7 +193,7 @@ class Arena : public AcquiredData {
 
     // This version gets called from the task setup code
     explicit Arena(ocrEdtDep_t dep)
-            : handle_(dep.guid), state_(static_cast<ArenaState *>(dep.ptr)) {
+            : handle_(dep.guid), state_(static_cast<ArenaState<T> *>(dep.ptr)) {
         internal::bookkeeping::AddDatablock(dep.guid, dep.ptr);
     }
 
@@ -213,7 +217,7 @@ class Arena : public AcquiredData {
 
     void *base_ptr() const { return state_; }
 
-    s64 size() const { return state_->size; }
+    s64 size() const { return state_->header.size; }
 
     T *data_ptr() const { return &internal::dballoc::GetArenaRoot<T>(state_); }
 
@@ -244,13 +248,13 @@ class Arena : public AcquiredData {
     friend void SetImplicitArena(Arena<U> arena);
 
  private:
-    Arena(ArenaState *tmp, u64 bytes, const DatablockHint *hint)
+    Arena(ArenaState<T> *tmp, u64 bytes, const DatablockHint *hint)
             : handle_(&tmp, bytes, hint), state_(tmp) {
         internal::dballoc::AllocatorDbInit(state_, bytes);
     }
 
     const ArenaHandle<T> handle_;
-    ArenaState *const state_;
+    ArenaState<T> *const state_;
 };
 
 template <typename T>
@@ -260,10 +264,9 @@ void SetImplicitArena(Arena<T> arena) {
 
 namespace internal {
 
-// FIXME - improve type handling for arenas
 template <typename T>
 struct Unpack<Arena<T>> {
-    typedef ArenaState Parameter;
+    typedef ArenaState<T> Parameter;
 };
 
 }  // namespace internal

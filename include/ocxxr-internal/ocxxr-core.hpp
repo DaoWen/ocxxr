@@ -387,45 +387,42 @@ template <typename R>
 struct ParamInfo<R()> {
     typedef void Type;
     static constexpr bool kHasParam = false;
-    static constexpr size_t kParamBytes = 0;
     typedef void(ParamFn)();
     typedef void(DepsFn)();
-};
-
-template <typename R, typename T, typename... As>
-struct ParamInfo<R(Datablock<T>, As...)> {
-    typedef void Type;
-    static constexpr bool kHasParam = false;
-    static constexpr size_t kParamBytes = 0;
-    typedef void(ParamFn)();
-    typedef void(DepsFn)(Datablock<T>, As...);
-};
-
-template <typename R, typename P, typename... As>
-struct ParamInfo<R(P, As...)> {
-    typedef P Type;
-    static constexpr bool kHasParam = true;
-    typedef void(ParamFn)(P);
-    typedef void(DepsFn)(As...);
-};
-
-template <typename P>
-struct FullParamInfo {
-    typedef typename std::remove_reference<P>::type RawP;
-    static constexpr size_t kParamBytes = sizeof(RawP);
-    static constexpr size_t kParamWordCount =
-            (kParamBytes + sizeof(u64) - 1) / sizeof(u64);
-    // This is going to get memcpy'd
-    static_assert(IsTriviallyCopyable<RawP>::value,
-                  "Task parameter must be trivially copyable.");
-};
-
-template <>
-struct FullParamInfo<void> {
-    typedef void RawP;
+    typedef void RawType;
     static constexpr size_t kParamBytes = 0;
     static constexpr size_t kParamWordCount = 0;
 };
+
+template <bool has_param, typename T, typename... As>
+struct ParamInfoHelp {
+    static constexpr bool kHasParam = true;
+    typedef void(ParamFn)(T);
+    typedef void(DepsFn)(As...);
+    typedef T Type;
+    typedef typename std::remove_reference<Type>::type RawType;
+    static constexpr size_t kParamBytes = sizeof(RawType);
+    static constexpr size_t kParamWordCount =
+            (kParamBytes + sizeof(u64) - 1) / sizeof(u64);
+    // This is going to get memcpy'd
+    static_assert(IsTriviallyCopyable<RawType>::value,
+                  "Task parameter must be trivially copyable.");
+};
+
+template <typename T, typename... As>
+struct ParamInfoHelp<false, T, As...> {
+    static constexpr bool kHasParam = false;
+    typedef void(ParamFn)();
+    typedef void(DepsFn)(T, As...);
+    typedef void Type;
+    typedef void RawType;
+    static constexpr size_t kParamBytes = 0;
+    static constexpr size_t kParamWordCount = 0;
+};
+
+template <typename R, typename T, typename... As>
+struct ParamInfo<R(T, As...)>
+        : public ParamInfoHelp<!IsBaseOf<AcquiredData, T>, T, As...> {};
 
 template <typename T>
 struct FnInfo;
@@ -509,8 +506,7 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...)> {
 
     static ocrGuid_t InternalFn(u32 paramc, u64 paramv[], u32 depc,
                                 ocrEdtDep_t depv[]) {
-        typedef typename internal::ParamInfo<F>::Type P;
-        ASSERT(paramc == internal::FullParamInfo<P>::kParamWordCount);
+        ASSERT(paramc == internal::ParamInfo<F>::kParamWordCount);
         ASSERT(depc == kDepc);
         PushTaskState();
         ocrGuid_t result = Launch(paramv, depv);
@@ -808,8 +804,7 @@ class TaskTemplate : public ObjectHandle {
         ocrEdt_t internal_fn =
                 internal::TaskImplementation<F, user_fn, PF, DF>::InternalFn;
         constexpr u16 depc = internal::FnInfo<F>::kDepCount;
-        typedef typename internal::ParamInfo<F>::Type P;
-        constexpr u16 paramc = internal::FullParamInfo<P>::kParamWordCount;
+        constexpr u16 paramc = internal::ParamInfo<F>::kParamWordCount;
         ocrEdtTemplateCreate(&guid, internal_fn, paramc, depc);
         return TaskTemplate<F>(guid);
     }

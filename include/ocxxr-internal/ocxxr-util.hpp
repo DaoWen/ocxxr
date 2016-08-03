@@ -32,20 +32,32 @@ struct IsLegalHandle {
 template <bool condition, typename T = int>
 using EnableIf = typename std::enable_if<condition, T>::type;
 
-template <typename T, typename U = int>
-using EnableIfVoid = EnableIf<std::is_same<void, T>::value, U>;
+template <typename T>
+constexpr bool IsVoid = std::is_same<T, void>::value;
+
+template <typename T, typename U>
+constexpr bool IsBaseOf = std::is_base_of<T, U>::value;
 
 template <typename T, typename U = int>
-using EnableIfNotVoid = EnableIf<!std::is_same<void, T>::value, U>;
+using EnableIfVoid = EnableIf<IsVoid<T>, U>;
+
+template <typename T, typename U = int>
+using EnableIfNotVoid = EnableIf<!IsVoid<T>, U>;
 
 template <typename T, typename U, typename V = int>
-using EnableIfBaseOf = EnableIf<std::is_base_of<T, U>::value, V>;
+using EnableIfBaseOf = EnableIf<IsBaseOf<T, U>, V>;
 
 template <typename T, typename U, typename V = int>
 using EnableIfSame = EnableIf<std::is_same<T, U>::value, V>;
 
 template <typename T, typename U, typename V = int>
 using EnableIfNotSame = EnableIf<!std::is_same<T, U>::value, V>;
+
+template <typename T, typename U>
+using IfVoid = typename std::conditional<IsVoid<T>, U, T>::type;
+
+template <typename T>
+constexpr size_t SizeOf = IsVoid<T> ? 0 : sizeof(IfVoid<T, char>);
 
 // Check error status of C API call
 inline void OK(u8 status) { ASSERT(status == 0); }
