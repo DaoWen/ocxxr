@@ -60,7 +60,7 @@ CXXFLAGS += -ferror-limit=$(ERROR_LIMIT) # clang
 else
 CXXFLAGS += -fmax-errors=$(ERROR_LIMIT) # gcc
 # GCC needs this, otherwise integer format macros are missing
-CFLAGS += -D__STDC_FORMAT_MACROS
+CXXFLAGS += -D__STDC_FORMAT_MACROS
 endif
 
 # always color the output (even when piped)

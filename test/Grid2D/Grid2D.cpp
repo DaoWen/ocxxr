@@ -1,4 +1,5 @@
 #include <ocxxr-main.hpp>
+#include <cstring>
 
 class Grid2D {
  private:
