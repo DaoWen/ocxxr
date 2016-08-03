@@ -103,7 +103,7 @@ inline DatablockAllocator &GetCurrentAllocator(void) {
 }
 
 template <typename T>
-inline T &GetArenaRoot(void *dbPtr) {
+T &GetArenaRoot(void *dbPtr) {
     typedef internal::dballoc::DbArenaHeader HT;
     HT *header = (HT *)dbPtr;
     return *(T *)&header[1];
@@ -112,7 +112,7 @@ inline T &GetArenaRoot(void *dbPtr) {
 // New
 
 template <typename T, typename... Ts>
-inline T *NewIn(internal::dballoc::DatablockAllocator arena, Ts &&... args) {
+T *NewIn(internal::dballoc::DatablockAllocator arena, Ts &&... args) {
     auto mem = arena.allocate(sizeof(T));
     return ::new (mem) T(std::forward<Ts>(args)...);
 }
@@ -133,8 +133,7 @@ struct TypeInitializer<
 // NewArray
 
 template <typename T>
-inline T *NewArrayIn(internal::dballoc::DatablockAllocator arena,
-                     size_t count) {
+T *NewArrayIn(internal::dballoc::DatablockAllocator arena, size_t count) {
     T *data = reinterpret_cast<T *>(arena.allocate(sizeof(T), count));
     for (size_t i = 0; i < count; i++) {
         TypeInitializer<T>::init(data[i]);
@@ -146,13 +145,13 @@ inline T *NewArrayIn(internal::dballoc::DatablockAllocator arena,
 }  // namespace internal
 
 template <typename T, typename... Ts>
-inline T *New(Ts &&... args) {
+T *New(Ts &&... args) {
     auto arena = internal::dballoc::AllocatorGet();
     return internal::dballoc::NewIn<T, Ts...>(arena, std::forward<Ts>(args)...);
 }
 
 template <typename T>
-inline T *NewArray(size_t count) {
+T *NewArray(size_t count) {
     auto arena = internal::dballoc::AllocatorGet();
     return internal::dballoc::NewArrayIn<T>(arena, count);
 }
@@ -244,7 +243,7 @@ class Arena : public AcquiredData {
 };
 
 template <typename T>
-inline void SetImplicitArena(Arena<T> arena) {
+void SetImplicitArena(Arena<T> arena) {
     internal::dballoc::SetCurrentArena(arena.state_);
 }
 

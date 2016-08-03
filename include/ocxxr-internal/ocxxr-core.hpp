@@ -58,10 +58,10 @@ static_assert(internal::IsLegalHandle<NullHandle>::value,
               "NullHandle must be castable to/from ocrGuid_t.");
 
 /// Shut down OCR.
-void Shutdown() { ocrShutdown(); }
+inline void Shutdown() { ocrShutdown(); }
 
 /// Abort OCR execution with an error code.
-void Abort(u8 error_code) { ocrAbort(error_code); }
+inline void Abort(u8 error_code) { ocrAbort(error_code); }
 
 /// Handle for an OCR datablock object.
 template <typename T>

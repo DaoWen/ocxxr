@@ -21,6 +21,7 @@ struct TaskLocalState {
     TaskLocalState *parent;
 };
 
+// defined in ocxxr-define-once.inc
 extern OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 
 /* Note: The push/pop task state functions are currently necessary because the
