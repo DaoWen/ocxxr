@@ -32,7 +32,8 @@ class DatablockAllocator {
     constexpr DatablockAllocator(void) : m_dbBuf(nullptr), m_info(nullptr) {}
 
     DatablockAllocator(void *dbPtr)
-            : m_dbBuf((char *)dbPtr), m_info((DbArenaHeader *)dbPtr) {}
+            : m_dbBuf(reinterpret_cast<char *>(dbPtr)),
+              m_info(reinterpret_cast<DbArenaHeader *>(dbPtr)) {}
 
     AllocatorState saveState(void) { return {m_info->offset}; }
 
@@ -45,7 +46,7 @@ class DatablockAllocator {
         m_info->offset = start + size;
         assert(m_info->offset <= m_info->size &&
                "Datablock allocator overflow");
-        return (void *)&m_dbBuf[start];
+        return &m_dbBuf[start];
     }
 
     // FIXME - I don't know if these alignment checks are sufficient,
@@ -74,7 +75,7 @@ inline DatablockAllocator &AllocatorGet(void);
 inline void AllocatorSetDb(void *dbPtr);
 
 inline void AllocatorDbInit(void *dbPtr, size_t dbSize) {
-    DbArenaHeader *const info = (DbArenaHeader *)dbPtr;
+    DbArenaHeader *const info = static_cast<DbArenaHeader *>(dbPtr);
     assert(dbSize >= sizeof(*info) && "Datablock is too small for allocator");
     info->size = dbSize;
     info->offset = sizeof(*info);
@@ -104,9 +105,8 @@ inline DatablockAllocator &GetCurrentAllocator(void) {
 
 template <typename T>
 T &GetArenaRoot(void *dbPtr) {
-    typedef internal::dballoc::DbArenaHeader HT;
-    HT *header = (HT *)dbPtr;
-    return *(T *)&header[1];
+    auto header = static_cast<internal::dballoc::DbArenaHeader *>(dbPtr);
+    return *reinterpret_cast<T *>(&header[1]);
 }
 
 // New
