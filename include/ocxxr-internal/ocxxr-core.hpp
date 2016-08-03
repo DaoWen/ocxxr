@@ -195,6 +195,16 @@ class Datablock : public AcquiredData {
     T *const data_;
 };
 
+template <typename T>
+class DataHandleList {
+    // FIXME - implement!
+};
+
+template <typename T>
+class DatablockList : public AcquiredData {
+    // FIXME - implement!
+};
+
 struct Properties {
     static constexpr u16 kLabeled = GUID_PROP_IS_LABELED;
     static constexpr u16 kChecked = GUID_PROP_IS_LABELED | GUID_PROP_CHECK;
@@ -381,24 +391,63 @@ static_assert(internal::IsLegalHandle<UnknownDependence<int>>::value,
 namespace internal {
 
 template <typename T>
-struct ParamInfo;
+struct Unpack {
+    static_assert(std::is_convertible<T, AcquiredData>::value,
+                  "Expected an OCR data container type.");
+};
 
-template <typename R>
-struct ParamInfo<R()> {
-    typedef void Type;
-    static constexpr bool kHasParam = false;
-    typedef void(ParamFn)();
-    typedef void(DepsFn)();
-    typedef void RawType;
-    static constexpr size_t kParamBytes = 0;
-    static constexpr size_t kParamWordCount = 0;
+template <template <typename> class T, typename U>
+struct Unpack<T<U>> {
+    typedef U Parameter;
+    static_assert(std::is_convertible<T<U>, DataHandle<U>>::value,
+                  "Expected an OCR data container type.");
+};
+template <>
+struct Unpack<NullHandle> {
+    typedef void Parameter;
+};
+template <>
+struct Unpack<void> {
+    typedef void Parameter;
+};
+
+template <typename AllArgs, typename... ArgsAcc>
+struct VarArgsInfoHelp;
+
+template <typename T, typename... ArgsAcc>
+struct VarArgsInfoHelp<void(DatablockList<T>), ArgsAcc...> {
+    static constexpr bool kHasVarArgs = true;
+    typedef void(DepsFn)(ArgsAcc...);
+    typedef void(VarArgsFn)(DatablockList<T>);
+    typedef void(VarArgsHandleFn)(DataHandleList<T>);
+};
+
+template <typename... ArgsAcc>
+struct VarArgsInfoHelp<void(), ArgsAcc...> {
+    static constexpr bool kHasVarArgs = false;
+    typedef void(DepsFn)(ArgsAcc...);
+    typedef void(VarArgsFn)();
+    typedef void(VarArgsHandleFn)();
+};
+
+template <typename Arg, typename... AllArgs, typename... ArgsAcc>
+struct VarArgsInfoHelp<void(Arg, AllArgs...), ArgsAcc...> {
+ protected:
+    // this checks that Arg is a valid dependence argument
+    typedef typename Unpack<Arg>::Parameter P;
+    typedef VarArgsInfoHelp<void(AllArgs...), ArgsAcc..., Arg> Recur;
+
+ public:
+    static constexpr bool kHasVarArgs = Recur::kHasVarArgs;
+    typedef typename Recur::DepsFn DepsFn;
+    typedef typename Recur::VarArgsFn VarArgsFn;
+    typedef typename Recur::VarArgsHandleFn VarArgsHandleFn;
 };
 
 template <bool has_param, typename T, typename... As>
-struct ParamInfoHelp {
+struct ParamInfoHelp : public VarArgsInfoHelp<void(As...)> {
     static constexpr bool kHasParam = true;
     typedef void(ParamFn)(T);
-    typedef void(DepsFn)(As...);
     typedef T Type;
     typedef typename std::remove_reference<Type>::type RawType;
     static constexpr size_t kParamBytes = sizeof(RawType);
@@ -410,11 +459,24 @@ struct ParamInfoHelp {
 };
 
 template <typename T, typename... As>
-struct ParamInfoHelp<false, T, As...> {
+struct ParamInfoHelp<false, T, As...> : public VarArgsInfoHelp<void(T, As...)> {
+    static constexpr bool kHasParam = false;
+    typedef void Type;
+    typedef void RawType;
+    typedef void(ParamFn)();
+    static constexpr size_t kParamBytes = 0;
+    static constexpr size_t kParamWordCount = 0;
+};
+
+template <typename T>
+struct ParamInfo;
+
+// Case: nullary
+template <typename R>
+struct ParamInfo<R()> : public VarArgsInfoHelp<void()> {
+    typedef void Type;
     static constexpr bool kHasParam = false;
     typedef void(ParamFn)();
-    typedef void(DepsFn)(T, As...);
-    typedef void Type;
     typedef void RawType;
     static constexpr size_t kParamBytes = 0;
     static constexpr size_t kParamWordCount = 0;
@@ -443,24 +505,6 @@ struct FnInfo<R(As...)> {
     static constexpr size_t kDepCount = sizeof...(As)-kDepStart;
     typedef typename ParamInfo<Fn>::ParamFn ParamFn;
     typedef typename ParamInfo<Fn>::DepsFn DepsFn;
-};
-
-template <typename T>
-struct Unpack;
-
-template <template <typename> class T, typename U>
-struct Unpack<T<U>> {
-    typedef U Parameter;
-    static_assert(std::is_convertible<T<U>, DataHandle<U>>::value,
-                  "Expected an OCR data container type.");
-};
-template <>
-struct Unpack<NullHandle> {
-    typedef void Parameter;
-};
-template <>
-struct Unpack<void> {
-    typedef void Parameter;
 };
 
 template <typename F>
