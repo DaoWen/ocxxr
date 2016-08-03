@@ -202,7 +202,34 @@ class DataHandleList {
 
 template <typename T>
 class DatablockList : public AcquiredData {
-    // FIXME - implement!
+ public:
+    // FIXME - use more OCR-friendly allocation method
+    DatablockList(size_t size)
+            : capacity_(size), count_(0), data_(new T[size]) {}
+
+    T *begin() const { return data_; }
+
+    T *end() const { return data_ + count_; }
+
+    T &operator[](size_t index) const {
+        ASSERT(index < capacity_);
+        return data_[index];
+    }
+
+    DatablockList &Add(Datablock<T> datablock) {
+        *end() = datablock;
+        ++count_;
+        return *this;
+    }
+
+    size_t capacity() const { return capacity_; }
+
+    size_t count() const { return count_; };
+
+ private:
+    size_t capacity_;
+    size_t count_;
+    T *data_;
 };
 
 struct Properties {
@@ -411,61 +438,73 @@ struct Unpack<void> {
     typedef void Parameter;
 };
 
-template <typename AllArgs, typename... ArgsAcc>
+template <bool kHasParam, typename AllArgs, typename... ArgsAcc>
 struct VarArgsInfoHelp;
 
-template <typename T, typename... ArgsAcc>
-struct VarArgsInfoHelp<void(DatablockList<T>), ArgsAcc...> {
+template <bool kHasParam, typename T, typename... ArgsAcc>
+struct VarArgsInfoHelp<kHasParam, void(DatablockList<T>), ArgsAcc...> {
     static constexpr bool kHasVarArgs = true;
     typedef void(DepsFn)(ArgsAcc...);
     typedef void(VarArgsFn)(DatablockList<T>);
     typedef void(VarArgsHandleFn)(DataHandleList<T>);
+    static constexpr size_t kParamStart = 1;
+    static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
-template <typename... ArgsAcc>
-struct VarArgsInfoHelp<void(), ArgsAcc...> {
+template <bool kHasParam, typename... ArgsAcc>
+struct VarArgsInfoHelp<kHasParam, void(), ArgsAcc...> {
     static constexpr bool kHasVarArgs = false;
     typedef void(DepsFn)(ArgsAcc...);
     typedef void(VarArgsFn)();
     typedef void(VarArgsHandleFn)();
+    static constexpr size_t kParamStart = 0;
+    static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
-template <typename Arg, typename... AllArgs, typename... ArgsAcc>
-struct VarArgsInfoHelp<void(Arg, AllArgs...), ArgsAcc...> {
+template <bool kHasParam, typename A, typename... AllArgs, typename... ArgsAcc>
+struct VarArgsInfoHelp<kHasParam, void(A, AllArgs...), ArgsAcc...> {
  protected:
-    // this checks that Arg is a valid dependence argument
-    typedef typename Unpack<Arg>::Parameter P;
-    typedef VarArgsInfoHelp<void(AllArgs...), ArgsAcc..., Arg> Recur;
+    // this checks that arg "A" is a valid dependence argument
+    typedef typename Unpack<A>::Parameter P;
+    typedef VarArgsInfoHelp<kHasParam, void(AllArgs...), ArgsAcc..., A> Recur;
 
  public:
     static constexpr bool kHasVarArgs = Recur::kHasVarArgs;
     typedef typename Recur::DepsFn DepsFn;
     typedef typename Recur::VarArgsFn VarArgsFn;
     typedef typename Recur::VarArgsHandleFn VarArgsHandleFn;
+    static constexpr size_t kParamStart = Recur::kParamStart;
+    static constexpr size_t kDepCount = Recur::kDepCount;
 };
 
 template <bool has_param, typename T, typename... As>
-struct ParamInfoHelp : public VarArgsInfoHelp<void(As...)> {
+struct ParamInfoHelp : public VarArgsInfoHelp<true, void(As...)> {
     static constexpr bool kHasParam = true;
+    static constexpr size_t kParamCount = 1;
     typedef void(ParamFn)(T);
     typedef T Type;
     typedef typename std::remove_reference<Type>::type RawType;
     static constexpr size_t kParamBytes = sizeof(RawType);
+    // count of just the parameter object words
     static constexpr size_t kParamWordCount =
             (kParamBytes + sizeof(u64) - 1) / sizeof(u64);
+    static constexpr size_t kDepStart = kHasParam ? 1 : 0;
     // This is going to get memcpy'd
     static_assert(IsTriviallyCopyable<RawType>::value,
                   "Task parameter must be trivially copyable.");
 };
 
 template <typename T, typename... As>
-struct ParamInfoHelp<false, T, As...> : public VarArgsInfoHelp<void(T, As...)> {
+struct ParamInfoHelp<false, T, As...>
+        : public VarArgsInfoHelp<false, void(T, As...)> {
     static constexpr bool kHasParam = false;
+    static constexpr size_t kParamCount = 0;
     typedef void Type;
     typedef void RawType;
     typedef void(ParamFn)();
     static constexpr size_t kParamBytes = 0;
     static constexpr size_t kParamWordCount = 0;
+    static constexpr size_t kDepStart = kHasParam ? 1 : 0;
 };
 
 template <typename T>
@@ -473,13 +512,15 @@ struct ParamInfo;
 
 // Case: nullary
 template <typename R>
-struct ParamInfo<R()> : public VarArgsInfoHelp<void()> {
+struct ParamInfo<R()> : public VarArgsInfoHelp<false, void()> {
     typedef void Type;
     static constexpr bool kHasParam = false;
+    static constexpr size_t kParamCount = 0;
     typedef void(ParamFn)();
     typedef void RawType;
     static constexpr size_t kParamBytes = 0;
     static constexpr size_t kParamWordCount = 0;
+    static constexpr size_t kDepStart = kHasParam ? 1 : 0;
 };
 
 template <typename R, typename T, typename... As>
@@ -490,7 +531,7 @@ template <typename T>
 struct FnInfo;
 
 template <typename R, typename... As>
-struct FnInfo<R(As...)> {
+struct FnInfo<R(As...)> : public ParamInfo<R(As...)> {
     static constexpr size_t kTotalArgCount = sizeof...(As);
     typedef R(Fn)(As...);
     typedef std::tuple<As...> Args;
@@ -499,10 +540,6 @@ struct FnInfo<R(As...)> {
     struct Arg {
         typedef typename std::tuple_element<I, Args>::type Type;
     };
-    static constexpr bool kHasParam = ParamInfo<Fn>::kHasParam;
-    static constexpr size_t kParamCount = kHasParam ? 1 : 0;
-    static constexpr size_t kDepStart = kParamCount;
-    static constexpr size_t kDepCount = sizeof...(As)-kDepStart;
     typedef typename ParamInfo<Fn>::ParamFn ParamFn;
     typedef typename ParamInfo<Fn>::DepsFn DepsFn;
 };
@@ -534,12 +571,14 @@ struct TaskArgTypeMatchesParamType {
     static constexpr bool value = true;
 };
 
-template <typename T, T *t, typename U, typename V>
+template <typename T, T *t, typename U, typename V, typename W>
 class TaskImplementation;
 
 // TODO - add static check to make sure Args have Datablock types
-template <typename F, F *user_fn, typename... Params, typename... Args>
-class TaskImplementation<F, user_fn, void(Params...), void(Args...)> {
+template <typename F, F *user_fn, typename... Params, typename... Args,
+          typename... VarArgs>
+class TaskImplementation<F, user_fn, void(Params...), void(Args...),
+                         void(VarArgs...)> {
  public:
     static constexpr size_t kDepc = internal::FnInfo<F>::kDepCount;
     static constexpr size_t kParamc = internal::FnInfo<F>::kParamCount;
@@ -583,7 +622,8 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...)> {
                         internal::IndexSeq<I...>, internal::IndexSeq<J...>) {
         static_cast<void>(paramv);  // unused if no parameters
         static_cast<void>(depv);    // unused if no deps
-        return user_fn((*UnpackParam<Params>(&paramv[I]))...,
+        constexpr size_t kParamStart = internal::ParamInfo<F>::kParamStart;
+        return user_fn((*UnpackParam<Params>(&paramv[I + kParamStart]))...,
                        (Args{depv[J]})...);
     }
 };
@@ -614,7 +654,7 @@ using DataHandleOf = DataHandle<typename internal::Unpack<T>::Parameter>;
 template <typename F>
 class TaskTemplate;
 
-template <typename T, typename U, typename V>
+template <typename T, typename U, typename V, typename W>
 class TaskBuilder;
 
 template <typename F>
@@ -680,7 +720,7 @@ class Task<Ret(Args...)> : public ObjectHandle {
 
  protected:
     // TODO - paramv support (check if first arg of F isn't a Datablock)
-    template <typename T, typename U, typename V>
+    template <typename T, typename U, typename V, typename W>
     friend class TaskBuilder;
 
     // TODO - add support for hints, output events, etc
@@ -737,8 +777,8 @@ class DelayedFuture {
     const Event<R> event_;
 };
 
-template <typename F, typename... Params, typename... Args>
-class TaskBuilder<F, void(Params...), void(Args...)> {
+template <typename F, typename... Params, typename... Args, typename... VarArgs>
+class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
  public:
     typedef typename internal::FnInfo<F>::Result Ret;
     static_assert(std::is_same<F, Ret(Params..., Args...)>::value,
@@ -834,6 +874,7 @@ class TaskTemplate : public ObjectHandle {
  public:
     typedef typename internal::FnInfo<F>::ParamFn PF;
     typedef typename internal::FnInfo<F>::DepsFn DF;
+    typedef typename internal::FnInfo<F>::VarArgsFn VAF;
 
     // TODO - ensure that function's parameters are Datablocks
     // TODO - ensure that there is only one by-value parameter
@@ -845,21 +886,22 @@ class TaskTemplate : public ObjectHandle {
     template <F *user_fn>
     static TaskTemplate<F> Create() {
         ocrGuid_t guid;
-        ocrEdt_t internal_fn =
-                internal::TaskImplementation<F, user_fn, PF, DF>::InternalFn;
+        ocrEdt_t internal_fn = internal::TaskImplementation<F, user_fn, PF, DF,
+                                                            VAF>::InternalFn;
         constexpr u16 depc = internal::FnInfo<F>::kDepCount;
-        constexpr u16 paramc = internal::ParamInfo<F>::kParamWordCount;
+        constexpr u16 paramc = internal::ParamInfo<F>::kParamStart +
+                               internal::ParamInfo<F>::kParamWordCount;
         ocrEdtTemplateCreate(&guid, internal_fn, paramc, depc);
         return TaskTemplate<F>(guid);
     }
 
-    TaskBuilder<F, PF, DF> operator()(u16 flags = EDT_PROP_NONE) const {
-        return TaskBuilder<F, PF, DF>(this->guid(), nullptr, flags);
+    TaskBuilder<F, PF, DF, VAF> operator()(u16 flags = EDT_PROP_NONE) const {
+        return TaskBuilder<F, PF, DF, VAF>(this->guid(), nullptr, flags);
     }
 
-    TaskBuilder<F, PF, DF> operator()(const TaskHint &hint,
-                                      u16 flags = EDT_PROP_NONE) const {
-        return TaskBuilder<F, PF, DF>(this->guid(), &hint, flags);
+    TaskBuilder<F, PF, DF, VAF> operator()(const TaskHint &hint,
+                                           u16 flags = EDT_PROP_NONE) const {
+        return TaskBuilder<F, PF, DF, VAF>(this->guid(), &hint, flags);
     }
 
     void Destroy() const { internal::OK(ocrEdtTemplateDestroy(this->guid())); }
