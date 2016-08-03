@@ -103,8 +103,7 @@ static inline T &GetArenaRoot(void *dbPtr) {
 // New
 
 template <typename T, typename... Ts>
-static inline T *NewIn(internal::dballoc::DatablockAllocator arena,
-                       Ts &&... args) {
+inline T *NewIn(internal::dballoc::DatablockAllocator arena, Ts &&... args) {
     auto mem = arena.allocate(sizeof(T));
     return ::new (mem) T(std::forward<Ts>(args)...);
 }
@@ -113,20 +112,20 @@ static inline T *NewIn(internal::dballoc::DatablockAllocator arena,
 
 template <typename T, typename NoInit = void>
 struct TypeInitializer {
-    static inline void init(T &target) { ::new (::std::addressof(target)) T(); }
+    static void init(T &target) { ::new (::std::addressof(target)) T(); }
 };
 
 template <typename T>
 struct TypeInitializer<
         T, typename std::enable_if<std::is_scalar<T>::value>::type> {
-    static inline void init(T &) {}
+    static void init(T &) {}
 };
 
 // NewArray
 
 template <typename T>
-static inline T *NewArrayIn(internal::dballoc::DatablockAllocator arena,
-                            size_t count) {
+inline T *NewArrayIn(internal::dballoc::DatablockAllocator arena,
+                     size_t count) {
     T *data = reinterpret_cast<T *>(arena.allocate(sizeof(T), count));
     for (size_t i = 0; i < count; i++) {
         TypeInitializer<T>::init(data[i]);
@@ -138,13 +137,13 @@ static inline T *NewArrayIn(internal::dballoc::DatablockAllocator arena,
 }  // namespace internal
 
 template <typename T, typename... Ts>
-static inline T *New(Ts &&... args) {
+inline T *New(Ts &&... args) {
     auto arena = internal::dballoc::AllocatorGet();
     return internal::dballoc::NewIn<T, Ts...>(arena, std::forward<Ts>(args)...);
 }
 
 template <typename T>
-static inline T *NewArray(size_t count) {
+inline T *NewArray(size_t count) {
     auto arena = internal::dballoc::AllocatorGet();
     return internal::dballoc::NewArrayIn<T>(arena, count);
 }
@@ -236,7 +235,7 @@ class Arena : public AcquiredData {
 };
 
 template <typename T>
-static inline void SetImplicitArena(Arena<T> arena) {
+inline void SetImplicitArena(Arena<T> arena) {
     internal::dballoc::SetCurrentArena(arena.state_);
 }
 
