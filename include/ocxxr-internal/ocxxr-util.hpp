@@ -48,6 +48,12 @@ using EnableIfNotSame = EnableIf<!std::is_same<T, U>::value, V>;
 // Check error status of C API call
 inline void OK(u8 status) { ASSERT(status == 0); }
 
+// defined in ocxxr-task-state.hpp
+inline void PushTaskState();
+
+// defined in ocxxr-task-state.hpp
+inline void PopTaskState();
+
 }  // namespace internal
 }  // namespace ocxxr
 

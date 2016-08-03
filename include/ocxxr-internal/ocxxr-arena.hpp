@@ -67,9 +67,18 @@ class DatablockAllocator {
     inline void *allocate(size_t size) const { return allocate(size, 1); }
 };
 
-DatablockAllocator &AllocatorGet(void);
-void AllocatorSetDb(void *dbPtr);
-void AllocatorDbInit(void *dbPtr, size_t dbSize);
+// defined in ocxxr-task-state.hpp
+inline DatablockAllocator &AllocatorGet(void);
+
+// defined in ocxxr-task-state.hpp
+inline void AllocatorSetDb(void *dbPtr);
+
+inline void AllocatorDbInit(void *dbPtr, size_t dbSize) {
+    DbArenaHeader *const info = (DbArenaHeader *)dbPtr;
+    assert(dbSize >= sizeof(*info) && "Datablock is too small for allocator");
+    info->size = dbSize;
+    info->offset = sizeof(*info);
+}
 
 }  // namespace dballoc
 }  // namespace internal
@@ -81,20 +90,20 @@ using AllocatorState = internal::dballoc::DatablockAllocator;
 namespace internal {
 namespace dballoc {
 
-static inline void InitializeArena(void *dbPtr, size_t dbSize) {
+inline void InitializeArena(void *dbPtr, size_t dbSize) {
     internal::dballoc::AllocatorDbInit(dbPtr, dbSize);
 }
 
-static inline void SetCurrentArena(void *dbPtr) {
+inline void SetCurrentArena(void *dbPtr) {
     internal::dballoc::AllocatorSetDb(dbPtr);
 }
 
-static inline DatablockAllocator &GetCurrentAllocator(void) {
+inline DatablockAllocator &GetCurrentAllocator(void) {
     return internal::dballoc::AllocatorGet();
 }
 
 template <typename T>
-static inline T &GetArenaRoot(void *dbPtr) {
+inline T &GetArenaRoot(void *dbPtr) {
     typedef internal::dballoc::DbArenaHeader HT;
     HT *header = (HT *)dbPtr;
     return *(T *)&header[1];

@@ -36,6 +36,8 @@ extern "C" {
 
 #include <ocxxr-internal/ocxxr-relptr.hpp>
 
+#include <ocxxr-internal/ocxxr-task-state.hpp>
+
 /// @brief Convenience macro for creating ocxxr task templates.
 /// @param[in] fn_ptr Name of a global function used to run tasks created from
 ///                   this template. Note that this *must* be a global function

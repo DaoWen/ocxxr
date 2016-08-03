@@ -1,5 +1,6 @@
 #ifndef OCXXR_CORE_HPP_
 #define OCXXR_CORE_HPP_
+/// @file
 
 #include <iterator>
 
@@ -503,7 +504,10 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...)> {
         typedef typename internal::ParamInfo<F>::Type P;
         ASSERT(paramc == internal::FullParamInfo<P>::kParamWordCount);
         ASSERT(depc == kDepc);
-        return Launch(paramv, depv);
+        PushTaskState();
+        ocrGuid_t result = Launch(paramv, depv);
+        PopTaskState();
+        return result;
     }
 
  private:
@@ -842,6 +846,18 @@ static_assert(IsLegalHandle<DummyTemplateType>::value,
               "TaskTemplate must be castable to/from ocrGuid_t.");
 
 }  // namespace internal
+
+/// @brief Main task's argument structure
+/// Wrapper class for datablock argument of the mainEdt.
+class MainTaskArgs {
+ public:
+    u64 argc() { return getArgc(this); }
+    char *argv(u64 index) { return getArgv(this, index); }
+};
+
+/// Prototype for user's Main task function
+void Main(Datablock<MainTaskArgs> args);
+
 }  // namespace ocxxr
 
 #endif  // OCXXR_CORE_HPP_
