@@ -95,8 +95,7 @@ extern OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 
 inline void PushTaskState() {
     TaskLocalState *parent_state = _task_local_state;
-    // FIXME - use a portable "task-local-alloc" function in place of "new"
-    _task_local_state = new TaskLocalState{};
+    _task_local_state = OCXXR_TEMP_NEW_ZERO(TaskLocalState);
     bookkeeping::AcquiredDbInfo *db_info = &_task_local_state->acquired_dbs;
     ASSERT(db_info->acquired_db_count == 0);  // should do zero-init
     _task_local_state->parent = parent_state;
@@ -105,8 +104,7 @@ inline void PushTaskState() {
 inline void PopTaskState() {
     TaskLocalState *child_state = _task_local_state;
     _task_local_state = _task_local_state->parent;
-    // FIXME - use a portable function in place of "delete"
-    delete child_state;
+    OCXXR_TEMP_DELETE(child_state);
 }
 
 //===============================================
@@ -230,7 +228,7 @@ inline DatablockAllocator &AllocatorGet(void) {
 
 /// Set the implicit arena allocator
 inline void AllocatorSetDb(void *dbPtr) {
-    new (&_task_local_state->arena_allocator) DatablockAllocator(dbPtr);
+    ::new (&_task_local_state->arena_allocator) DatablockAllocator(dbPtr);
 }
 
 }  // namespace dballoc

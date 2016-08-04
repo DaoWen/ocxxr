@@ -3,6 +3,18 @@
 
 #include <cstddef>
 
+// TODO - These temporary-data allocation macros should be defined
+// per-platform with an efficient (and legal) implementation.
+// The delete macros must be null-safe.
+
+#define OCXXR_TEMP_NEW(type) (new type)
+#define OCXXR_TEMP_NEW_ZERO(type) (new type{})
+#define OCXXR_TEMP_DELETE(var) (delete var)
+
+#define OCXXR_TEMP_ARRAY_NEW(type, count) (new type[count])
+#define OCXXR_TEMP_ARRAY_NEW_ZERO(type, count) (new type[count]{})
+#define OCXXR_TEMP_ARRAY_DELETE(var) (delete[] var)
+
 namespace ocxxr {
 namespace internal {
 

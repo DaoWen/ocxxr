@@ -2,6 +2,7 @@
 #define OCXXR_CORE_HPP_
 /// @file
 
+#include <algorithm>
 #include <iterator>
 
 namespace ocxxr {
@@ -35,6 +36,10 @@ class AcquiredData {};
 class NullHandle : public ObjectHandle {
  public:
     NullHandle() : ObjectHandle(NULL_GUID) {}
+
+    NullHandle(ocrEdtDep_t dep) : ObjectHandle(dep.guid) {
+        ASSERT(!dep.ptr && this->is_null());
+    }
 
     // auto-convert NullHandle to any ObjectHandle type
     template <typename T, internal::EnableIfBaseOf<ObjectHandle, T> = 0>
@@ -179,6 +184,9 @@ class Datablock : public AcquiredData {
         internal::bookkeeping::RemoveDatablock(handle_.guid());
     }
 
+    /// Destroy this datablock.
+    void Destroy() const { handle_.Destroy(); }
+
     // automatic type conversion to DatablockHandle
     operator DatablockHandle<T>() const { return handle_; }
 
@@ -191,8 +199,8 @@ class Datablock : public AcquiredData {
     Datablock(T *tmp, u64 count, const DatablockHint *hint)
             : handle_(&tmp, count, hint), data_(tmp) {}
 
-    const DatablockHandle<T> handle_;
-    T *const data_;
+    DatablockHandle<T> handle_;
+    T *data_;
 };
 
 template <typename T>
@@ -203,20 +211,33 @@ class DataHandleList {
 template <typename T>
 class DatablockList : public AcquiredData {
  public:
-    // FIXME - use more OCR-friendly allocation method
+    // FIXME - define move assignment function.
     DatablockList(size_t size)
-            : capacity_(size), count_(0), data_(new T[size]) {}
+            : capacity_(size),
+              count_(0),
+              data_(size ? OCXXR_TEMP_ARRAY_NEW(Datablock<T>, size) : nullptr) {
+    }
 
-    T *begin() const { return data_; }
+    DatablockList(DatablockList &&other)
+            : capacity_(other.capacity_),
+              count_(other.count_),
+              data_(other.data_) {
+        other.data_ = nullptr;
+    }
 
-    T *end() const { return data_ + count_; }
+    ~DatablockList() { OCXXR_TEMP_ARRAY_DELETE(data_); }
 
-    T &operator[](size_t index) const {
+    Datablock<T> *begin() const { return data_; }
+
+    Datablock<T> *end() const { return data_ + count_; }
+
+    Datablock<T> &operator[](size_t index) const {
         ASSERT(index < capacity_);
         return data_[index];
     }
 
     DatablockList &Add(Datablock<T> datablock) {
+        ASSERT(count_ < capacity_ && "DatablockList overflow!");
         *end() = datablock;
         ++count_;
         return *this;
@@ -229,7 +250,7 @@ class DatablockList : public AcquiredData {
  private:
     size_t capacity_;
     size_t count_;
-    T *data_;
+    Datablock<T> *data_;
 };
 
 struct Properties {
@@ -447,7 +468,7 @@ struct VarArgsInfoHelp<kHasParam, void(DatablockList<T>), ArgsAcc...> {
     typedef void(DepsFn)(ArgsAcc...);
     typedef void(VarArgsFn)(DatablockList<T>);
     typedef void(VarArgsHandleFn)(DataHandleList<T>);
-    static constexpr size_t kParamStart = 1;
+    typedef T VarArgsType;
     static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
@@ -457,7 +478,7 @@ struct VarArgsInfoHelp<kHasParam, void(), ArgsAcc...> {
     typedef void(DepsFn)(ArgsAcc...);
     typedef void(VarArgsFn)();
     typedef void(VarArgsHandleFn)();
-    static constexpr size_t kParamStart = 0;
+    typedef void VarArgsType;
     static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
@@ -473,65 +494,53 @@ struct VarArgsInfoHelp<kHasParam, void(A, AllArgs...), ArgsAcc...> {
     typedef typename Recur::DepsFn DepsFn;
     typedef typename Recur::VarArgsFn VarArgsFn;
     typedef typename Recur::VarArgsHandleFn VarArgsHandleFn;
-    static constexpr size_t kParamStart = Recur::kParamStart;
+    typedef typename Recur::VarArgsType VarArgsType;
     static constexpr size_t kDepCount = Recur::kDepCount;
 };
 
 template <bool has_param, typename T, typename... As>
-struct ParamInfoHelp : public VarArgsInfoHelp<true, void(As...)> {
+struct TaskArgInfoHelp : public VarArgsInfoHelp<true, void(As...)> {
     static constexpr bool kHasParam = true;
     static constexpr size_t kParamCount = 1;
     typedef void(ParamFn)(T);
     typedef T Type;
     typedef typename std::remove_reference<Type>::type RawType;
-    static constexpr size_t kParamBytes = sizeof(RawType);
-    // count of just the parameter object words
-    static constexpr size_t kParamWordCount =
-            (kParamBytes + sizeof(u64) - 1) / sizeof(u64);
     static constexpr size_t kDepStart = kHasParam ? 1 : 0;
-    // This is going to get memcpy'd
-    static_assert(IsTriviallyCopyable<RawType>::value,
-                  "Task parameter must be trivially copyable.");
 };
 
 template <typename T, typename... As>
-struct ParamInfoHelp<false, T, As...>
+struct TaskArgInfoHelp<false, T, As...>
         : public VarArgsInfoHelp<false, void(T, As...)> {
     static constexpr bool kHasParam = false;
     static constexpr size_t kParamCount = 0;
     typedef void Type;
-    typedef void RawType;
     typedef void(ParamFn)();
-    static constexpr size_t kParamBytes = 0;
-    static constexpr size_t kParamWordCount = 0;
     static constexpr size_t kDepStart = kHasParam ? 1 : 0;
 };
 
 template <typename T>
-struct ParamInfo;
+struct TaskArgInfo;
 
 // Case: nullary
 template <typename R>
-struct ParamInfo<R()> : public VarArgsInfoHelp<false, void()> {
+struct TaskArgInfo<R()> : public VarArgsInfoHelp<false, void()> {
     typedef void Type;
     static constexpr bool kHasParam = false;
     static constexpr size_t kParamCount = 0;
     typedef void(ParamFn)();
     typedef void RawType;
-    static constexpr size_t kParamBytes = 0;
-    static constexpr size_t kParamWordCount = 0;
     static constexpr size_t kDepStart = kHasParam ? 1 : 0;
 };
 
 template <typename R, typename T, typename... As>
-struct ParamInfo<R(T, As...)>
-        : public ParamInfoHelp<!IsBaseOf<AcquiredData, T>, T, As...> {};
+struct TaskArgInfo<R(T, As...)>
+        : public TaskArgInfoHelp<!IsBaseOf<AcquiredData, T>, T, As...> {};
 
 template <typename T>
 struct FnInfo;
 
 template <typename R, typename... As>
-struct FnInfo<R(As...)> : public ParamInfo<R(As...)> {
+struct FnInfo<R(As...)> : public TaskArgInfo<R(As...)> {
     static constexpr size_t kTotalArgCount = sizeof...(As);
     typedef R(Fn)(As...);
     typedef std::tuple<As...> Args;
@@ -540,8 +549,30 @@ struct FnInfo<R(As...)> : public ParamInfo<R(As...)> {
     struct Arg {
         typedef typename std::tuple_element<I, Args>::type Type;
     };
-    typedef typename ParamInfo<Fn>::ParamFn ParamFn;
-    typedef typename ParamInfo<Fn>::DepsFn DepsFn;
+    typedef typename TaskArgInfo<Fn>::ParamFn ParamFn;
+    typedef typename TaskArgInfo<Fn>::DepsFn DepsFn;
+};
+
+template <typename F, bool has_param = TaskArgInfo<F>::kHasParam>
+struct TaskParamInfo {
+    typedef typename TaskArgInfo<F>::Type Type;
+    typedef typename std::remove_reference<Type>::type RawType;
+    static constexpr size_t kParamBytes = sizeof(RawType);
+    // count of just the parameter object words
+    static constexpr size_t kParamWordCount =
+            (kParamBytes + sizeof(u64) - 1) / sizeof(u64);
+    // This is going to get memcpy'd
+    static_assert(IsTriviallyCopyable<RawType>::value,
+                  "Task parameter must be trivially copyable.");
+};
+
+template <typename F>
+struct TaskParamInfo<F, false> {
+    typedef void Type;
+    typedef void RawType;
+    static constexpr size_t kParamBytes = 0;
+    // count of just the parameter object words
+    static constexpr size_t kParamWordCount = 0;
 };
 
 template <typename F>
@@ -582,34 +613,48 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...),
  public:
     static constexpr size_t kDepc = internal::FnInfo<F>::kDepCount;
     static constexpr size_t kParamc = internal::FnInfo<F>::kParamCount;
+    static constexpr size_t kVarArgc = sizeof...(VarArgs);
     typedef typename internal::FnInfo<F>::Result R;
 
-    static_assert(std::is_same<F, R(Params..., Args...)>::value,
+    static_assert(std::is_same<F, R(Params..., Args..., VarArgs...)>::value,
                   "Task function must have a consistent type.");
 
     static ocrGuid_t InternalFn(u32 paramc, u64 paramv[], u32 depc,
                                 ocrEdtDep_t depv[]) {
-        ASSERT(paramc == internal::ParamInfo<F>::kParamWordCount);
-        ASSERT(depc == kDepc);
+        ASSERT(paramc == internal::TaskParamInfo<F>::kParamWordCount);
+        ASSERT(kVarArgc > 0 || depc == kDepc);
+        ASSERT(depc >= kDepc);
         PushTaskState();
-        ocrGuid_t result = Launch(paramv, depv);
+        ocrGuid_t result = Launch(paramv, depc, depv);
         PopTaskState();
         return result;
     }
 
  private:
     template <typename U = R, EnableIfVoid<U> = 0>
-    static ocrGuid_t Launch(u64 paramv[], ocrEdtDep_t depv[]) {
-        UnpackArgs(paramv, depv, internal::MakeIndexSeq<kParamc>(),
-                   internal::MakeIndexSeq<kDepc>());
+    static ocrGuid_t Launch(u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+        UnpackArgs(paramv, depc, depv, internal::MakeIndexSeq<kParamc>(),
+                   internal::MakeIndexSeq<kDepc>(),
+                   internal::MakeIndexSeq<kVarArgc>());
         return NULL_GUID;
     }
 
     template <typename U = R, EnableIfNotVoid<U> = 0>
-    static ocrGuid_t Launch(u64 paramv[], ocrEdtDep_t depv[]) {
-        return UnpackArgs(paramv, depv, internal::MakeIndexSeq<kParamc>(),
-                          internal::MakeIndexSeq<kDepc>())
+    static ocrGuid_t Launch(u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+        return UnpackArgs(paramv, depc, depv, internal::MakeIndexSeq<kParamc>(),
+                          internal::MakeIndexSeq<kDepc>(),
+                          internal::MakeIndexSeq<kVarArgc>())
                 .guid();
+    }
+
+    template <typename T = typename internal::FnInfo<F>::VarArgsType>
+    static DatablockList<T> UnpackVarArgs(u32 depc, ocrEdtDep_t depv[],
+                                          size_t) {
+        DatablockList<T> var_args(depc);
+        for (u32 i = kDepc; i < depc; i++) {
+            var_args.Add(Datablock<T>(depv[i]));
+        }
+        return std::move(var_args);
     }
 
     template <typename T, typename U = typename std::remove_reference<T>::type>
@@ -617,14 +662,15 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...),
         return reinterpret_cast<U *>(param);
     }
 
-    template <size_t... I, size_t... J>
-    static R UnpackArgs(u64 paramv[], ocrEdtDep_t depv[],
-                        internal::IndexSeq<I...>, internal::IndexSeq<J...>) {
+    template <size_t... I, size_t... J, size_t... K>
+    static R UnpackArgs(u64 paramv[], u32 depc, ocrEdtDep_t depv[],
+                        internal::IndexSeq<I...>, internal::IndexSeq<J...>,
+                        internal::IndexSeq<K...>) {
+        static_assert(sizeof...(K) <= 1, "Maximum of one VarArg");
         static_cast<void>(paramv);  // unused if no parameters
         static_cast<void>(depv);    // unused if no deps
-        constexpr size_t kParamStart = internal::ParamInfo<F>::kParamStart;
-        return user_fn((*UnpackParam<Params>(&paramv[I + kParamStart]))...,
-                       (Args{depv[J]})...);
+        return user_fn((*UnpackParam<Params>(&paramv[I]))...,
+                       (Args{depv[J]})..., (UnpackVarArgs(depc, depv, K))...);
     }
 };
 
@@ -693,11 +739,64 @@ class Task<Ret(Args...)> : public ObjectHandle {
             U src, ocrDbAccessMode_t mode = AccessMode::kDefault) const {
         namespace i = internal;
         static_assert(slot < kDepc, "Slot too high.");
-        constexpr u32 dep_slot = slot + i::FnInfo<F>::kDepStart;
-        using Expected = typename i::FnInfo<F>::template Arg<dep_slot>::Type;
+        constexpr u32 arg_slot = slot + i::FnInfo<F>::kDepStart;
+        using Expected = typename i::FnInfo<F>::template Arg<arg_slot>::Type;
         static_assert(i::TaskArgTypeMatchesParamType<Expected, U, slot>::value,
                       "Dependence argument must match slot type.");
         ocrGuid_t src_guid = static_cast<DataHandleOf<U>>(src).guid();
+        internal::OK(ocrAddDependence(src_guid, this->guid(), slot, mode));
+        return *this;
+    }
+
+    /// @brief Set up VarArgs dependencies.
+    ///
+    /// @param[in] src DatablockList source for the dependencies.
+    /// @param[in] mode Access mode requested for the input data.
+    template <u32 slot = kDepc, typename T>
+    const Task<F> &DependOnList(
+            const DatablockList<T> &src,
+            ocrDbAccessMode_t mode = AccessMode::kDefault) const {
+        namespace i = internal;
+        static_assert(i::FnInfo<F>::kHasVarArgs && slot == kDepc,
+                      "Only use this function to add VarArgs list dependences");
+        typedef typename i::FnInfo<F>::VarArgsType U;
+        typedef DatablockList<U> Expected;
+        typedef DatablockList<T> Actual;
+        static_assert(std::is_same<Expected, Actual>::value,
+                      "Dependence argument must match slot type.");
+        const u32 count = src.capacity();
+        const ocrGuid_t task = this->guid();
+        for (u32 j = 0; j < count; j++) {
+            ocrGuid_t g = static_cast<DataHandle<U>>(src[j]).guid();
+            internal::OK(ocrAddDependence(g, task, slot + j, mode));
+        }
+        return *this;
+    }
+
+    /// @brief Set up a dependence from one of this task's input slots to a data
+    /// source. The input slot is located in the task's VarArgs list.
+    ///
+    /// @param[in] index Index of this dependence in the VarArgs list.
+    /// @param[in] src Data source for the dependency.
+    /// @param[in] mode Access mode requested for the input data.
+    ///
+    /// Note that the index value is not statically verifiable.
+    /// Using an invalid index will result in a run-time error.
+    template <typename T>
+    const Task<F> &DependOnWithinList(
+            u32 index, T src,
+            ocrDbAccessMode_t mode = AccessMode::kDefault) const {
+        namespace i = internal;
+        typedef typename i::FnInfo<F>::VarArgsType U;
+        typedef DataHandle<U> Expected;
+        typedef DataHandleOf<T> Actual;
+        const u32 slot = kDepc + index;
+        static_assert(i::FnInfo<F>::kHasVarArgs,
+                      "Only use this function to add VarArgs list dependences");
+        static_assert(
+                i::TaskArgTypeMatchesParamType<Expected, Actual, kDepc>::value,
+                "Dependence argument must match slot type.");
+        ocrGuid_t src_guid = static_cast<Expected>(src).guid();
         internal::OK(ocrAddDependence(src_guid, this->guid(), slot, mode));
         return *this;
     }
@@ -719,28 +818,27 @@ class Task<Ret(Args...)> : public ObjectHandle {
     }
 
  protected:
-    // TODO - paramv support (check if first arg of F isn't a Datablock)
     template <typename T, typename U, typename V, typename W>
     friend class TaskBuilder;
 
     // TODO - add support for hints, output events, etc
-    Task(Event<R> *out_event, ocrGuid_t task_template, u64 paramv[],
+    Task(Event<R> *out_event, ocrGuid_t task_template, u64 paramv[], u32 depc,
          ocrGuid_t depv[], const TaskHint *hint, u16 flags)
-            : ObjectHandle(Init(out_event, task_template, paramv, depv, hint,
-                                flags)) {}
+            : ObjectHandle(Init(out_event, task_template, paramv, depc, depv,
+                                hint, flags)) {}
 
  private:
     static ocrGuid_t Init(Event<R> *out_event, ocrGuid_t task_template,
-                          u64 paramv[], ocrGuid_t depv[], const TaskHint *hint,
-                          u16 flags) {
+                          u64 paramv[], u32 depc, ocrGuid_t depv[],
+                          const TaskHint *hint, u16 flags) {
         ocrGuid_t guid;
         ocrGuid_t *out_guid = reinterpret_cast<ocrGuid_t *>(out_event);
         ASSERT(paramv != nullptr || kParamc == 0);
         // TODO - open bug for adding const qualifiers in OCR C API.
         // E.g., "const ocrHint_t *hint" in ocrEdtCreate.
         ocrHint_t *raw_hint = const_cast<ocrHint_t *>(hint->internal());
-        ocrEdtCreate(&guid, task_template, EDT_PARAM_DEF, paramv, EDT_PARAM_DEF,
-                     depv, flags, raw_hint, out_guid);
+        ocrEdtCreate(&guid, task_template, EDT_PARAM_DEF, paramv, depc, depv,
+                     flags, raw_hint, out_guid);
         return guid;
     }
 
@@ -780,33 +878,49 @@ class DelayedFuture {
 template <typename F, typename... Params, typename... Args, typename... VarArgs>
 class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
  public:
+    static constexpr bool kHasVarArgs = sizeof...(VarArgs) > 0;
+    static constexpr size_t kDepc = internal::FnInfo<F>::kDepCount;
     typedef typename internal::FnInfo<F>::Result Ret;
-    static_assert(std::is_same<F, Ret(Params..., Args...)>::value,
+    static_assert(std::is_same<F, Ret(Params..., Args..., VarArgs...)>::value,
                   "Task function must have a consistent type.");
     typedef typename internal::Unpack<Ret>::Parameter R;
 
     TaskBuilder(ocrGuid_t template_guid, const TaskHint *hint, u16 flags)
             : template_guid_(template_guid), hint_(hint), flags_(flags) {}
 
-    Task<F> CreateTask(Params... params, DataHandleOf<Args>... deps) {
-        return HelpCreateTask<Args...>(nullptr, params..., deps...);
+    Task<F> CreateTask(Params... params, DataHandleOf<Args>... deps,
+                       const VarArgs &... var_args) {
+        return CreateFullTask(nullptr, params..., deps..., var_args...);
+    }
+
+    Task<F> CreateTaskPartial(Params... params, u32 var_args_count = 0) {
+        ASSERT(var_args_count == 0 || kHasVarArgs);
+        return CreateNullTask(nullptr, params..., var_args_count);
     }
 
     template <typename... Deps,
-              internal::EnableIf<sizeof...(Deps) != sizeof...(Args)> = 0>
+              internal::EnableIf<(!kHasVarArgs &&
+                                  sizeof...(Deps) != sizeof...(Args))> = 0>
     Task<F> CreateTaskPartial(Params... params, Deps... deps) {
-        if (sizeof...(Deps) == 0) {
-            return HelpCreateTask<>(nullptr, params...);
-        } else {
-            auto missing_indices =
-                    internal::CountMissingDeps<sizeof...(Deps),
-                                               sizeof...(Args)>::indices();
-            return PadTask(missing_indices, params..., deps...);
-        }
+        static_assert(sizeof...(Deps) > 0,
+                      "Shoudln't invoke this overload with no deps");
+        auto missing_indices =
+                internal::CountMissingDeps<sizeof...(Deps),
+                                           sizeof...(Args)>::indices();
+        return PadTask(missing_indices, params..., deps...);
+    }
+
+    DelayedFuture<F> CreateFuturePartial(Params... params,
+                                         u32 var_args_count = 0) {
+        ASSERT(var_args_count == 0 || kHasVarArgs);
+        Event<R> out_event;
+        auto task = CreateNullTask(&out_event, params..., var_args_count);
+        return DelayedFuture<F>(task, out_event);
     }
 
     template <typename... Deps,
-              internal::EnableIf<sizeof...(Deps) != sizeof...(Args)> = 0>
+              internal::EnableIf<(!kHasVarArgs &&
+                                  sizeof...(Deps) != sizeof...(Args))> = 0>
     DelayedFuture<F> CreateFuturePartial(Params... params, Deps... deps) {
         auto missing_indices =
                 internal::CountMissingDeps<sizeof...(Deps),
@@ -815,24 +929,71 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     }
 
  private:
-    template <typename... Deps>
-    Task<F> HelpCreateTask(Event<R> *out_event, Params... params,
-                           DataHandleOf<Deps>... deps) {
-        static_assert(
-                sizeof...(Deps) == sizeof...(Args) || sizeof...(Deps) == 0,
-                "Must either provide all dependence args or none.");
-        ASSERT(flags_ != EDT_PROP_FINISH &&
+    template <bool kEnable = !kHasVarArgs, internal::EnableIf<kEnable> = 0>
+    Task<F> CreateFullTask(Event<R> *out_event, Params... params,
+                           DataHandleOf<Args>... deps) {
+        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
                 reinterpret_cast<u64 *>(&params)..., nullptr};
         // Set provided dependences
-        ocrGuid_t depv[1 + Task<F>::kDepc] = {
-                (static_cast<DataHandleOf<Deps>>(deps).guid())..., NULL_GUID};
-        ocrGuid_t *depv_ptr = sizeof...(Deps) ? depv : nullptr;
+        constexpr u32 depc = kDepc;
+        ocrGuid_t depv[1 + depc] = {
+                (static_cast<DataHandleOf<Args>>(deps).guid())..., NULL_GUID};
+        ocrGuid_t *depv_ptr = depc > 0 ? depv : nullptr;
         // Create the task
-        return Task<F>(out_event, template_guid_, param_ptr[0], depv_ptr, hint_,
-                       flags_);
+        return Task<F>(out_event, template_guid_, param_ptr[0], depc, depv_ptr,
+                       hint_, flags_);
+    }
+
+    template <typename T, bool kEnable = kHasVarArgs,
+              internal::EnableIf<kEnable> = 0>
+    Task<F> CreateFullTask(Event<R> *out_event, Params... params,
+                           DataHandleOf<Args>... deps,
+                           const DatablockList<T> &var_args) {
+        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
+               "Created Finish-type EDT, but not using the output event.");
+        // Set params (if any)
+        u64 *param_ptr[1 + Task<F>::kParamc] = {
+                reinterpret_cast<u64 *>(&params)..., nullptr};
+        // Set provided dependences
+        ASSERT(var_args.count() == var_args.capacity() &&
+               "Used incomplete DatablockList for task creation");
+        const u32 depc = kDepc + var_args.capacity();
+        ocrGuid_t *depv;
+        if (depc > 0) {
+            depv = OCXXR_TEMP_ARRAY_NEW(ocrGuid_t, depc);
+            const unsigned long count = kDepc;
+            ::new (depv) ocrGuid_t[std::max(1UL, count)]{
+                    (static_cast<DataHandleOf<Args>>(deps).guid())...};
+            auto j = var_args.begin();
+            for (u32 i = kDepc; i < depc; i++, j++) {
+                depv[i] = j->handle().guid();
+            }
+        } else {
+            depv = nullptr;
+        }
+        // Create the task
+        auto task = Task<F>(out_event, template_guid_, param_ptr[0], depc, depv,
+                            hint_, flags_);
+        OCXXR_TEMP_ARRAY_DELETE(depv);  // must be null-safe
+        return task;
+    }
+
+    Task<F> CreateNullTask(Event<R> *out_event, Params... params,
+                           u32 var_args_count) {
+        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
+               "Created Finish-type EDT, but not using the output event.");
+        // Set params (if any)
+        u64 *param_ptr[1 + Task<F>::kParamc] = {
+                reinterpret_cast<u64 *>(&params)..., nullptr};
+        // Create the task
+        ASSERT((var_args_count == 0 || kHasVarArgs) &&
+               "Only provide var_args_count for tasks with VarArgs")
+        const u32 depc = kDepc + var_args_count;
+        return Task<F>(out_event, template_guid_, param_ptr[0], depc, nullptr,
+                       hint_, flags_);
     }
 
     template <size_t... I, typename... Deps>
@@ -848,17 +1009,16 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
                                Deps... deps) {
         static_assert(sizeof...(I) + sizeof...(Deps) == sizeof...(Args),
                       "Correct total number of arguments for task.");
-        return CreateFuture<Args...>(params..., deps...,
-                                     internal::DefaultDependence(I)...);
+        return CreateFuture(params..., deps...,
+                            internal::DefaultDependence(I)...);
     }
 
     // This is private because the output event is useless if all deps are
     // provided up-front (due to the data race with the corresponding task).
-    template <typename... Deps>
     DelayedFuture<F> CreateFuture(Params... params,
-                                  DataHandleOf<Deps>... deps) {
+                                  DataHandleOf<Args>... deps) {
         Event<R> out_event;
-        auto task = HelpCreateTask<Deps...>(&out_event, params..., deps...);
+        auto task = CreateFullTask(&out_event, params..., deps...);
         return DelayedFuture<F>(task, out_event);
     }
 
@@ -875,10 +1035,8 @@ class TaskTemplate : public ObjectHandle {
     typedef typename internal::FnInfo<F>::ParamFn PF;
     typedef typename internal::FnInfo<F>::DepsFn DF;
     typedef typename internal::FnInfo<F>::VarArgsFn VAF;
+    static constexpr bool kHasVarArgs = internal::FnInfo<F>::kHasVarArgs;
 
-    // TODO - ensure that function's parameters are Datablocks
-    // TODO - ensure that there is only one by-value parameter
-    // (and update badTask2Params with the static assert message)
     /// @brief Create a task template.
     /// The macro #OCXXR_TEMPLATE_FOR(fn_ptr) is provided as a more
     /// convenient way of invoking this function. (Invoking this function
@@ -888,9 +1046,9 @@ class TaskTemplate : public ObjectHandle {
         ocrGuid_t guid;
         ocrEdt_t internal_fn = internal::TaskImplementation<F, user_fn, PF, DF,
                                                             VAF>::InternalFn;
-        constexpr u16 depc = internal::FnInfo<F>::kDepCount;
-        constexpr u16 paramc = internal::ParamInfo<F>::kParamStart +
-                               internal::ParamInfo<F>::kParamWordCount;
+        constexpr u32 depc =
+                kHasVarArgs ? EDT_PARAM_UNK : internal::FnInfo<F>::kDepCount;
+        constexpr u32 paramc = internal::TaskParamInfo<F>::kParamWordCount;
         ocrEdtTemplateCreate(&guid, internal_fn, paramc, depc);
         return TaskTemplate<F>(guid);
     }
