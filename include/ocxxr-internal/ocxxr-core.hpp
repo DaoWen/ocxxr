@@ -307,7 +307,7 @@ class Event : public DataHandle<T> {
             : DataHandle<T>(Init(type, flags, &params, self)) {}
 
  private:
-    static constexpr bool kIsVoid = std::is_same<void, T>::value;
+    static constexpr bool kIsVoid = internal::IsVoid<T>::Value;
     static constexpr u16 kDefaultFlags =
             kIsVoid ? EVT_PROP_NONE : EVT_PROP_TAKES_ARG;
 
@@ -532,9 +532,9 @@ struct TaskArgInfo<R()> : public VarArgsInfoHelp<false, void()> {
     static constexpr size_t kDepStart = kHasParam ? 1 : 0;
 };
 
-template <typename R, typename T, typename... As>
-struct TaskArgInfo<R(T, As...)>
-        : public TaskArgInfoHelp<!IsBaseOf<AcquiredData, T>, T, As...> {};
+template <typename R, typename T, typename... A>
+struct TaskArgInfo<R(T, A...)>
+        : public TaskArgInfoHelp<!IsBaseOf<AcquiredData, T>::Value, T, A...> {};
 
 template <typename T>
 struct FnInfo;
@@ -668,6 +668,7 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...),
                         internal::IndexSeq<K...>) {
         static_assert(sizeof...(K) <= 1, "Maximum of one VarArg");
         static_cast<void>(paramv);  // unused if no parameters
+        static_cast<void>(depc);    // unused if no deps
         static_cast<void>(depv);    // unused if no deps
         return user_fn((*UnpackParam<Params>(&paramv[I]))...,
                        (Args{depv[J]})..., (UnpackVarArgs(depc, depv, K))...);
@@ -963,10 +964,10 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
         const u32 depc = kDepc + var_args.capacity();
         ocrGuid_t *depv;
         if (depc > 0) {
-            depv = OCXXR_TEMP_ARRAY_NEW(ocrGuid_t, depc);
-            const unsigned long count = kDepc;
-            ::new (depv) ocrGuid_t[std::max(1UL, count)]{
-                    (static_cast<DataHandleOf<Args>>(deps).guid())...};
+            depv = OCXXR_TEMP_ARRAY_NEW(ocrGuid_t, depc + 1);
+            ::new (depv) ocrGuid_t[kDepc + 1]{
+                    (static_cast<DataHandleOf<Args>>(deps).guid())...,
+                    NULL_GUID};
             auto j = var_args.begin();
             for (u32 i = kDepc; i < depc; i++, j++) {
                 depv[i] = j->handle().guid();

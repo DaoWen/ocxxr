@@ -45,19 +45,23 @@ template <bool condition, typename T = int>
 using EnableIf = typename std::enable_if<condition, T>::type;
 
 template <typename T>
-constexpr bool IsVoid = std::is_same<T, void>::value;
+struct IsVoid {
+    static constexpr bool Value = std::is_same<T, void>::value;
+};
 
 template <typename T, typename U>
-constexpr bool IsBaseOf = std::is_base_of<T, U>::value;
+struct IsBaseOf {
+    static constexpr bool Value = std::is_base_of<T, U>::value;
+};
 
 template <typename T, typename U = int>
-using EnableIfVoid = EnableIf<IsVoid<T>, U>;
+using EnableIfVoid = EnableIf<IsVoid<T>::Value, U>;
 
 template <typename T, typename U = int>
-using EnableIfNotVoid = EnableIf<!IsVoid<T>, U>;
+using EnableIfNotVoid = EnableIf<!IsVoid<T>::Value, U>;
 
 template <typename T, typename U, typename V = int>
-using EnableIfBaseOf = EnableIf<IsBaseOf<T, U>, V>;
+using EnableIfBaseOf = EnableIf<IsBaseOf<T, U>::Value, V>;
 
 template <typename T, typename U, typename V = int>
 using EnableIfSame = EnableIf<std::is_same<T, U>::value, V>;
@@ -65,11 +69,13 @@ using EnableIfSame = EnableIf<std::is_same<T, U>::value, V>;
 template <typename T, typename U, typename V = int>
 using EnableIfNotSame = EnableIf<!std::is_same<T, U>::value, V>;
 
-template <typename T, typename U>
-using IfVoid = typename std::conditional<IsVoid<T>, U, T>::type;
+template <typename T, typename U = unsigned char>
+using IfVoid = typename std::conditional<IsVoid<T>::Value, U, T>::type;
 
 template <typename T>
-constexpr size_t SizeOf = IsVoid<T> ? 0 : sizeof(IfVoid<T, char>);
+struct SizeOf {
+    static constexpr size_t Value = IsVoid<T>::Value ? 0 : sizeof(IfVoid<T>);
+};
 
 // Check error status of C API call
 inline void OK(u8 status) { ASSERT(status == 0); }
