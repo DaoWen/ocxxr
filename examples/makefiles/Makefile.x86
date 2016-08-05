@@ -160,5 +160,5 @@ endif
 #CFLAGS += -fdiagnostics-color=always
 
 # Address sanitizer (clang)
-CFLAGS += -fsanitize=address -fno-omit-frame-pointer
-LDFLAGS += -fsanitize=address
+#CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+#LDFLAGS += -fsanitize=address
