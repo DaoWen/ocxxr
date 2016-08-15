@@ -1,0 +1,6 @@
+{
+  "name": "ocxxr",
+  "tagline": "C++ bindings for the Open Community Runtime API",
+  "body": "This is a header-only library providing a C++ interface for the Open Community Runtime API.\r\n\r\n### Resources for ocxxr\r\n\r\n* [Project README on GitHub](https://github.com/DaoWen/ocxxr/#readme)\r\n* [Doxygen pages](./doxygen/)\r\n\r\n### General Resources for OCR\r\n\r\n* <https://xstackwiki.modelado.org/Open_Community_Runtime>",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
