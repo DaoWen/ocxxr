@@ -1056,6 +1056,8 @@ class TaskTemplate : public ObjectHandle {
         return TaskTemplate<F>(guid);
     }
 
+    explicit TaskTemplate(ocrGuid_t guid = NULL_GUID) : ObjectHandle(guid) {}
+
     TaskBuilder<F, PF, DF, VAF> operator()(u16 flags = EDT_PROP_NONE) const {
         return TaskBuilder<F, PF, DF, VAF>(this->guid(), nullptr, flags);
     }
@@ -1068,8 +1070,6 @@ class TaskTemplate : public ObjectHandle {
     void Destroy() const { internal::OK(ocrEdtTemplateDestroy(this->guid())); }
 
  private:
-    explicit TaskTemplate(ocrGuid_t guid) : ObjectHandle(guid) {}
-
     typedef typename internal::FnInfo<F>::Result Result;
     typedef typename internal::Unpack<Result>::Parameter Parameter;
     static_assert(
