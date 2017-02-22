@@ -45,6 +45,6 @@ extern "C" {
 ///                   pointer) because the function is used as a compile-time
 ///                   argument to the ocxxr::TaskTemplate#Create function.
 #define OCXXR_TEMPLATE_FOR(fn_ptr) \
-    ::ocxxr::TaskTemplate<decltype(fn_ptr)>::Create<fn_ptr>();
+    ::ocxxr::TaskTemplate<decltype(fn_ptr)>::template Create<fn_ptr>();
 
 #endif  // OCXXR_HPP_
