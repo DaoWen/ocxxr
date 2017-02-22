@@ -15,6 +15,9 @@ else  #XSTG_ROOT
   APPS_ROOT        ?= $(XSTG_ROOT)/apps/apps
 endif #XSTG_ROOT
 
+# Use C++ compiler for linking
+export CC=$(CXX)
+
 # Name of the application to build
 TARGET := $(shell basename `pwd`)
 
