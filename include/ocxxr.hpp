@@ -14,8 +14,10 @@ extern "C" {
 #include <ocr.h>
 }
 
+#include <cassert>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 #ifndef OCXXR_USING_CXX14
 // Need C++11 compatibility
