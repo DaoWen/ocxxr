@@ -79,7 +79,19 @@ class BasedPtr {
  public:
     constexpr BasedPtr() : target_guid_(ERROR_GUID), offset_(0) {}
 
+    BasedPtr(ocrGuid_t target, ptrdiff_t offset)
+            : target_guid_(target), offset_(offset) {}
+
+// FIXME - I had to disable the RelPtr-like optimized case
+// because it makes copying non-trivial, which means that
+// BasedPtr types become non-trivially-copyable...
+// I should refactor to make it work again, maybe making a special
+// "EmbeddedBasedPtr" type that is only legal inside of a datablock.
+#if 0  // DISABLED
     BasedPtr(const BasedPtr &other) { set(other); }
+#else
+    BasedPtr(const BasedPtr &) = default;
+#endif
 
     BasedPtr(const T *other) { set(other); }
 
@@ -90,10 +102,14 @@ class BasedPtr {
         return *this;
     }
 
+#if 0  // DISABLED
     BasedPtr &operator=(const BasedPtr &other) {
         set(other);
         return *this;
     }
+#else
+    BasedPtr &operator=(const BasedPtr &) = default;
+#endif
 
     T &operator*() const { return *get(); }
 
@@ -105,6 +121,8 @@ class BasedPtr {
 
     bool operator!() const { return ocrGuidIsNull(target_guid_); }
 
+    ocrGuid_t target_guid() const { return target_guid_; }
+
     // TODO - implement math operators, like increment and decrement
 
  private:
@@ -113,6 +131,7 @@ class BasedPtr {
 
     ptrdiff_t base_ptr() const { return reinterpret_cast<ptrdiff_t>(this); }
 
+#if 0  // DISABLED
     void set(const BasedPtr &other) {
         if (ocrGuidIsUninitialized(other.target_guid_)) {
             set(other.get());
@@ -121,6 +140,7 @@ class BasedPtr {
             offset_ = other.offset_;
         }
     }
+#endif
 
     void set(const T *other) {
         internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_);
@@ -130,10 +150,12 @@ class BasedPtr {
         ASSERT(!ocrGuidIsError(target_guid_));
         if (ocrGuidIsNull(target_guid_)) {
             return nullptr;
+#if 0  // DISABLED
         } else if (ocrGuidIsUninitialized(target_guid_)) {
             // optimized case: treat as intra-datablock RelPtr
             ptrdiff_t target = base_ptr() + offset_;
             return reinterpret_cast<T *>(target);
+#endif
         } else {
             // normal case: inter-datablock pointer
             ptrdiff_t target = internal::AddressForGuid(target_guid_) + offset_;

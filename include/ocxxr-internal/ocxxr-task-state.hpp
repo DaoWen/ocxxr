@@ -203,17 +203,23 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
         ASSERT(i != a_end && i->base_addr() <= dst_addr &&
                dst_addr <= end_addr &&
                "Based pointer must point into an acquired datablock");
-        // output results
+// output results
+#if 0  // DISABLED
         if (i->base_addr() <= src_addr && src_addr <= end_addr) {
             // optimized case: treat as intra-datablock RelPtr
             *guid_out = UNINITIALIZED_GUID;
             *offset_out = dst_addr - src_addr;
-        } else {
-            // normal case: inter-datablock pointer
-            *guid_out = i->guid();
-            *offset_out = dst_addr - i->base_addr();
-        }
+#else
+        if (false) {
+            (void)src_addr;
+#endif
     }
+    else {
+        // normal case: inter-datablock pointer
+        *guid_out = i->guid();
+        *offset_out = dst_addr - i->base_addr();
+    }
+}
 }
 
 //===============================================
