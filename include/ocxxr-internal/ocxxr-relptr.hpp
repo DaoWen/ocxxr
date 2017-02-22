@@ -39,6 +39,8 @@ class RelPtr {
 
     operator T *() const { return get(); }
 
+    bool operator!() const { return offset_ == 0; }
+
     // TODO - implement math operators, like increment and decrement
 
  private:
@@ -100,6 +102,8 @@ class BasedPtr {
     T &operator[](const int index) const { return get()[index]; }
 
     operator T *() const { return get(); }
+
+    bool operator!() const { return ocrGuidIsNull(target_guid_); }
 
     // TODO - implement math operators, like increment and decrement
 
