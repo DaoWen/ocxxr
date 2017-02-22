@@ -95,14 +95,16 @@ class DatablockHandle : public DataHandle<T> {
     DatablockHandle(u64 count, const DatablockHint &hint)
             : DataHandle<T>(Init(sizeof(T) * count, false, &hint)) {}
 
-    static ocrGuid_t Init(u64 bytes, const DatablockHint *hint) {
-        T **data_ptr;
-        return Init(&data_ptr, bytes, false, hint);
+    static ocrGuid_t Init(u64 bytes, bool acquire, const DatablockHint *hint) {
+        T *data_ptr;
+        return Init(&data_ptr, bytes, acquire, hint);
     }
 
     static ocrGuid_t Init(T **data_ptr, u64 bytes, bool acquire,
                           const DatablockHint *hint) {
         ocrGuid_t guid;
+        // FIXME - look into this bug
+        ASSERT(acquire && "OCR currently has a bug with NO_ACQUIRE");
         const u16 flags = acquire ? DB_PROP_NONE : DB_PROP_NO_ACQUIRE;
         // TODO - open bug for adding const qualifiers in OCR C API.
         // E.g., "const ocrHint_t *hint" in ocrDbCreate.
