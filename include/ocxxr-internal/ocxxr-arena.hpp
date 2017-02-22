@@ -1,7 +1,6 @@
 #ifndef OCXXR_ARENA_HPP_
 #define OCXXR_ARENA_HPP_
 
-#include <cassert>
 #include <cstddef>
 #include <memory>
 
@@ -163,6 +162,9 @@ T *NewArray(size_t count) {
 template <typename T>
 class ArenaHandle : public DatablockHandle<ArenaState<T>> {
  public:
+    static constexpr size_t kHeaderSize =
+            sizeof(internal::dballoc::DbArenaHeader);
+
     explicit ArenaHandle(u64 bytes) : ArenaHandle(nullptr, bytes, nullptr) {}
 
     explicit ArenaHandle(u64 bytes, const DatablockHint &hint)
@@ -179,13 +181,29 @@ class ArenaHandle : public DatablockHandle<ArenaState<T>> {
     explicit ArenaHandle(ocrGuid_t guid = NULL_GUID)
             : DatablockHandle<ArenaState<T>>(guid) {}
 
-    // create a datablock, but don't acquire it.
-    static ArenaHandle Create(u64 bytes) { return ArenaHandle(bytes); }
+    // XXX - are we actually using this?
+    operator ArenaHandle<void>() const {
+        return *reinterpret_cast<ArenaHandle<void> *>(
+                const_cast<ArenaHandle<T> *>(this));
+    }
+
+    // create an arena, but don't acquire it.
+    static ArenaHandle Create(u64 bytes) {
+        return ArenaHandle(kHeaderSize + bytes);
+    }
+
+    // this is just here for supporting Unpack
+    DatablockHandle<ArenaState<T>> handle() const {
+        return *reinterpret_cast<DatablockHandle<ArenaState<T>> *>(
+                const_cast<ArenaHandle<T> *>(this));
+    }
 };
 
 template <typename T>
 class Arena : public AcquiredData {
  public:
+    static constexpr size_t kHeaderSize = ArenaHandle<T>::kHeaderSize;
+
     explicit Arena(u64 bytes) : Arena(nullptr, bytes, nullptr) {}
 
     explicit Arena(u64 bytes, const DatablockHint &hint)
@@ -201,7 +219,11 @@ class Arena : public AcquiredData {
     explicit Arena(std::nullptr_t np = nullptr)
             : handle_(NULL_GUID), state_(np) {}
 
-    static Arena<T> Create(u64 bytes) { return Arena<T>(bytes); }
+    static Arena<T> Create(u64 bytes) { return Arena<T>(kHeaderSize + bytes); }
+
+    static Arena<T> CreateArray(u64 count) {
+        return Arena<T>(kHeaderSize + sizeof(T) * count);
+    }
 
     template <typename U = T, internal::EnableIfNotVoid<U> = 0>
     U &data() const {
@@ -212,6 +234,8 @@ class Arena : public AcquiredData {
 
     template <typename U = T, internal::EnableIfNotVoid<U> = 0>
     U &operator*() const {
+        // The template type U is only here to get enable_if to work.
+        static_assert(std::is_same<T, U>::value, "Template types must match.");
         return data<U>();
     }
 
@@ -231,6 +255,10 @@ class Arena : public AcquiredData {
 
     operator ArenaHandle<T>() const { return handle(); }
 
+    Arena<void> Untyped() const {
+        return *reinterpret_cast<Arena<void> *>(const_cast<Arena<T> *>(this));
+    }
+
     template <typename U, typename... Args>
     U *New(Args &&... args) {
         auto alloc = internal::dballoc::DatablockAllocator(state_);
@@ -243,6 +271,9 @@ class Arena : public AcquiredData {
         auto alloc = internal::dballoc::DatablockAllocator(state_);
         return internal::dballoc::NewArrayIn<U>(alloc, count);
     }
+
+    /// Destroy this Arena.
+    void Destroy() const { handle_.Destroy(); }
 
     template <typename U>
     friend void SetImplicitArena(Arena<U> arena);

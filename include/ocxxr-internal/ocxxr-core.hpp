@@ -448,9 +448,22 @@ struct Unpack {
 
 template <template <typename> class T, typename U>
 struct Unpack<T<U>> {
-    typedef U Parameter;
-    static_assert(std::is_convertible<T<U>, DataHandle<U>>::value,
-                  "Expected an OCR data container type.");
+    // Automatically choose one of two options for unpacking this type
+    template <typename A, typename B, bool X = std::is_convertible<A, B>::value>
+    struct Help;
+    // Base Case: found a direct conversion to a DataHandle<U> type
+    template <typename A, typename B>
+    struct Help<A, B, true> {
+        typedef U Type;
+    };
+    // Recursive Case: use conversion to DataHandle via handle() method
+    template <typename A, typename B>
+    struct Help<A, B, false> {
+        typedef decltype(::std::declval<A>().handle()) HandleType;
+        typedef typename Unpack<HandleType>::Parameter Type;
+    };
+    // Unpack the parameter type via Helper
+    typedef typename Help<T<U>, DataHandle<U>>::Type Parameter;
 };
 template <>
 struct Unpack<NullHandle> {
@@ -460,6 +473,9 @@ template <>
 struct Unpack<void> {
     typedef void Parameter;
 };
+
+static_assert(::std::is_same<Unpack<DatablockHandle<void>>::Parameter, void>::value,
+  "Support for void DatablockHandles is broken");
 
 template <bool kHasParam, typename AllArgs, typename... ArgsAcc>
 struct VarArgsInfoHelp;
