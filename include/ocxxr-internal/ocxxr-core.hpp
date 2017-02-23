@@ -474,8 +474,9 @@ struct Unpack<void> {
     typedef void Parameter;
 };
 
-static_assert(::std::is_same<Unpack<DatablockHandle<void>>::Parameter, void>::value,
-  "Support for void DatablockHandles is broken");
+static_assert(
+        ::std::is_same<Unpack<DatablockHandle<void>>::Parameter, void>::value,
+        "Support for void DatablockHandles is broken");
 
 template <bool kHasParam, typename AllArgs, typename... ArgsAcc>
 struct VarArgsInfoHelp;

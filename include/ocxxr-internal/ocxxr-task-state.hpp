@@ -209,17 +209,18 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
             // optimized case: treat as intra-datablock RelPtr
             *guid_out = UNINITIALIZED_GUID;
             *offset_out = dst_addr - src_addr;
+        }
 #else
         if (false) {
             (void)src_addr;
+        }
 #endif
+        else {
+            // normal case: inter-datablock pointer
+            *guid_out = i->guid();
+            *offset_out = dst_addr - i->base_addr();
+        }
     }
-    else {
-        // normal case: inter-datablock pointer
-        *guid_out = i->guid();
-        *offset_out = dst_addr - i->base_addr();
-    }
-}
 }
 
 //===============================================
