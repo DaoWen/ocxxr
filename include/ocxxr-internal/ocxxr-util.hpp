@@ -101,7 +101,8 @@ inline ptrdiff_t AddressForGuid(ocrGuid_t);
 
 // defined in ocxxr-task-state.hpp
 inline void GuidOffsetForAddress(const void *target, const void *source,
-                                 ocrGuid_t *guid_out, ptrdiff_t *offset_out);
+                                 ocrGuid_t *guid_out, ptrdiff_t *offset_out,
+                                 bool embedded = false);
 
 }  // namespace internal
 }  // namespace ocxxr

@@ -177,7 +177,8 @@ inline ptrdiff_t AddressForGuid(ocrGuid_t guid) {
 }
 
 inline void GuidOffsetForAddress(const void *target, const void *source,
-                                 ocrGuid_t *guid_out, ptrdiff_t *offset_out) {
+                                 ocrGuid_t *guid_out, ptrdiff_t *offset_out,
+                                 bool embedded) {
     using bookkeeping::DbPair;
     // All three cases are handled internally by this function call.
     // optimized case: treat as intra-datablock RelPtr
@@ -203,18 +204,11 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
         ASSERT(i != a_end && i->base_addr() <= dst_addr &&
                dst_addr <= end_addr &&
                "Based pointer must point into an acquired datablock");
-// output results
-#if 0  // DISABLED
-        if (i->base_addr() <= src_addr && src_addr <= end_addr) {
+        if (embedded && i->base_addr() <= src_addr && src_addr <= end_addr) {
             // optimized case: treat as intra-datablock RelPtr
             *guid_out = UNINITIALIZED_GUID;
             *offset_out = dst_addr - src_addr;
         }
-#else
-        if (false) {
-            (void)src_addr;
-        }
-#endif
         else {
             // normal case: inter-datablock pointer
             *guid_out = i->guid();

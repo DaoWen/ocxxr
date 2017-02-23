@@ -89,16 +89,11 @@ class BasedPtr {
     BasedPtr(ocrGuid_t target, ptrdiff_t offset)
             : target_guid_(target), offset_(offset) {}
 
-// FIXME - I had to disable the RelPtr-like optimized case
-// because it makes copying non-trivial, which means that
-// BasedPtr types become non-trivially-copyable...
-// I should refactor to make it work again, maybe making a special
-// "EmbeddedBasedPtr" type that is only legal inside of a datablock.
 #if 0  // DISABLED
     BasedPtr(const BasedPtr &other) { set(other); }
-#else
-    BasedPtr(const BasedPtr &) = default;
 #endif
+
+    BasedPtr(const BasedPtr &) = default;
 
     BasedPtr(const T *other) { set(other); }
 
@@ -114,9 +109,9 @@ class BasedPtr {
         set(other);
         return *this;
     }
-#else
-    BasedPtr &operator=(const BasedPtr &) = default;
 #endif
+
+    BasedPtr &operator=(const BasedPtr &) = default;
 
     T &operator*() const { return *get(); }
 
@@ -154,33 +149,31 @@ class BasedPtr {
     ocrGuid_t target_guid_;
     ptrdiff_t offset_;
 
+ protected:
     ptrdiff_t base_ptr() const { return reinterpret_cast<ptrdiff_t>(this); }
 
-#if 0  // DISABLED
-    void set(const BasedPtr &other) {
-        if (ocrGuidIsUninitialized(other.target_guid_)) {
+    void set(const BasedPtr &other, bool embedded = false) {
+        if (embedded && ocrGuidIsUninitialized(other.target_guid_)) {
             set(other.get());
         } else {
             target_guid_ = other.target_guid_;
             offset_ = other.offset_;
         }
     }
-#endif
 
-    void set(const T *other) {
-        internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_);
+    void set(const T *other, bool embedded = false) {
+        internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_,
+                                       embedded);
     }
 
-    T *get() const {
+    T *get(bool embedded = false) const {
         ASSERT(!ocrGuidIsError(target_guid_));
         if (ocrGuidIsNull(target_guid_)) {
             return nullptr;
-#if 0  // DISABLED
-        } else if (ocrGuidIsUninitialized(target_guid_)) {
+        } else if (embedded && ocrGuidIsUninitialized(target_guid_)) {
             // optimized case: treat as intra-datablock RelPtr
             ptrdiff_t target = base_ptr() + offset_;
             return reinterpret_cast<T *>(target);
-#endif
         } else {
             // normal case: inter-datablock pointer
             ptrdiff_t target = internal::AddressForGuid(target_guid_) + offset_;
