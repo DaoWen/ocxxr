@@ -38,7 +38,7 @@ class NullHandle : public ObjectHandle {
     NullHandle() : ObjectHandle(NULL_GUID) {}
 
     NullHandle(ocrEdtDep_t dep) : ObjectHandle(dep.guid) {
-        ASSERT(!dep.ptr && this->is_null());
+        assert(!dep.ptr && this->is_null());
     }
 
     // auto-convert NullHandle to any ObjectHandle type
@@ -104,7 +104,7 @@ class DatablockHandle : public DataHandle<T> {
                           const DatablockHint *hint) {
         ocrGuid_t guid;
         // FIXME - look into this bug
-        ASSERT(acquire && "OCR currently has a bug with NO_ACQUIRE");
+        assert(acquire && "OCR currently has a bug with NO_ACQUIRE");
         const u16 flags = acquire ? DB_PROP_NONE : DB_PROP_NO_ACQUIRE;
         // TODO - open bug for adding const qualifiers in OCR C API.
         // E.g., "const ocrHint_t *hint" in ocrDbCreate.
@@ -153,7 +153,7 @@ class Datablock : public AcquiredData {
     U &data() const {
         // The template type U is only here to get enable_if to work.
         static_assert(std::is_same<T, U>::value, "Template types must match.");
-        ASSERT(data_ != nullptr);
+        assert(data_ != nullptr);
         return *data_;
     }
 
@@ -234,12 +234,12 @@ class DatablockList : public AcquiredData {
     Datablock<T> *end() const { return data_ + count_; }
 
     Datablock<T> &operator[](size_t index) const {
-        ASSERT(index < capacity_);
+        assert(index < capacity_);
         return data_[index];
     }
 
     DatablockList &Add(Datablock<T> datablock) {
-        ASSERT(count_ < capacity_ && "DatablockList overflow!");
+        assert(count_ < capacity_ && "DatablockList overflow!");
         *end() = datablock;
         ++count_;
         return *this;
@@ -316,7 +316,7 @@ class Event : public DataHandle<T> {
     static ocrGuid_t Init(ocrEventTypes_t type, u16 flags,
                           ocrEventParams_t *params, Event self) {
         ocrGuid_t guid = self.guid();
-        ASSERT(self.is_null() == !(flags & Properties::kLabeled) &&
+        assert(self.is_null() == !(flags & Properties::kLabeled) &&
                "Provide self handle iff this is labeled event.");
         flags |= kDefaultFlags;  // Add data mode to flags
         if (params) {
@@ -640,9 +640,9 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...),
 
     static ocrGuid_t InternalFn(u32 paramc, u64 paramv[], u32 depc,
                                 ocrEdtDep_t depv[]) {
-        ASSERT(paramc == internal::TaskParamInfo<F>::kParamWordCount);
-        ASSERT(kVarArgc > 0 || depc == kDepc);
-        ASSERT(depc >= kDepc);
+        assert(paramc == internal::TaskParamInfo<F>::kParamWordCount);
+        assert(kVarArgc > 0 || depc == kDepc);
+        assert(depc >= kDepc);
         PushTaskState();
         ocrGuid_t result = Launch(paramv, depc, depv);
         PopTaskState();
@@ -853,7 +853,7 @@ class Task<Ret(Args...)> : public ObjectHandle {
                           const TaskHint *hint, u16 flags) {
         ocrGuid_t guid;
         ocrGuid_t *out_guid = reinterpret_cast<ocrGuid_t *>(out_event);
-        ASSERT(paramv != nullptr || kParamc == 0);
+        assert(paramv != nullptr || kParamc == 0);
         // TODO - open bug for adding const qualifiers in OCR C API.
         // E.g., "const ocrHint_t *hint" in ocrEdtCreate.
         ocrHint_t *raw_hint = const_cast<ocrHint_t *>(hint->internal());
@@ -914,7 +914,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     }
 
     Task<F> CreateTaskPartial(Params... params, u32 var_args_count = 0) {
-        ASSERT(var_args_count == 0 || kHasVarArgs);
+        assert(var_args_count == 0 || kHasVarArgs);
         return CreateNullTask(nullptr, params..., var_args_count);
     }
 
@@ -932,7 +932,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
 
     DelayedFuture<F> CreateFuturePartial(Params... params,
                                          u32 var_args_count = 0) {
-        ASSERT(var_args_count == 0 || kHasVarArgs);
+        assert(var_args_count == 0 || kHasVarArgs);
         Event<R> out_event;
         auto task = CreateNullTask(&out_event, params..., var_args_count);
         return DelayedFuture<F>(task, out_event);
@@ -952,7 +952,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     template <bool kEnable = !kHasVarArgs, internal::EnableIf<kEnable> = 0>
     Task<F> CreateFullTask(Event<R> *out_event, Params... params,
                            DataHandleOf<Args>... deps) {
-        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
@@ -972,13 +972,13 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     Task<F> CreateFullTask(Event<R> *out_event, Params... params,
                            DataHandleOf<Args>... deps,
                            const DatablockList<T> &var_args) {
-        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
                 reinterpret_cast<u64 *>(&params)..., nullptr};
         // Set provided dependences
-        ASSERT(var_args.count() == var_args.capacity() &&
+        assert(var_args.count() == var_args.capacity() &&
                "Used incomplete DatablockList for task creation");
         const u32 depc = kDepc + var_args.capacity();
         ocrGuid_t *depv;
@@ -1003,14 +1003,14 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
 
     Task<F> CreateNullTask(Event<R> *out_event, Params... params,
                            u32 var_args_count) {
-        ASSERT((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
                 reinterpret_cast<u64 *>(&params)..., nullptr};
         // Create the task
-        ASSERT((var_args_count == 0 || kHasVarArgs) &&
-               "Only provide var_args_count for tasks with VarArgs")
+        assert((var_args_count == 0 || kHasVarArgs) &&
+               "Only provide var_args_count for tasks with VarArgs");
         const u32 depc = kDepc + var_args_count;
         return Task<F>(out_event, template_guid_, param_ptr[0], depc, nullptr,
                        hint_, flags_);

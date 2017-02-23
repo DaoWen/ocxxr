@@ -67,7 +67,7 @@ class RelPtr {
     }
 
     T *get() const {
-        ASSERT(offset_ != 1);
+        assert(offset_ != 1);
         if (offset_ == 0) {
             return nullptr;
         } else {
@@ -168,7 +168,7 @@ class BasedPtr {
     }
 
     T *get(bool embedded = false) const {
-        ASSERT(!ocrGuidIsError(target_guid_));
+        assert(!ocrGuidIsError(target_guid_));
         if (ocrGuidIsNull(target_guid_)) {
             return nullptr;
         } else if (embedded && ocrGuidIsUninitialized(target_guid_)) {

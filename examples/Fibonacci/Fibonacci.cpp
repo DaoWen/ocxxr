@@ -25,7 +25,7 @@ void CheckResult(u32 n, ocxxr::Datablock<u64> result) {
     }
     PRINTF("Fib(%" PRIu32 ") = %" PRIu64 "\n", n, *result);
     const u64 expected_answer = SequentialFib(n);
-    ASSERT(*result == expected_answer);
+    assert(*result == expected_answer);
     ocxxr::Shutdown();
 }
 

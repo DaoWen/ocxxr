@@ -178,7 +178,7 @@ class ArenaHandle : public DatablockHandle<ArenaState<T>> {
                          const DatablockHint *hint)
             : DatablockHandle<ArenaState<T>>(
                       data_ptr, bytes + sizeof(ArenaState<T>), hint) {
-        ASSERT(bytes >= sizeof(internal::SizeOf<T>) &&
+        assert(bytes >= sizeof(internal::SizeOf<T>) &&
                "Arena must be big enough to hold root object");
     }
 

@@ -81,7 +81,7 @@ template <typename T>
 void Unused(const T &) {}
 
 // Check error status of C API call
-inline void OK(u8 status) { ASSERT(status == 0); }
+inline void OK(u8 status) { assert(status == 0); }
 
 // defined in ocxxr-task-state.hpp
 inline void PushTaskState();

@@ -97,7 +97,7 @@ inline void PushTaskState() {
     TaskLocalState *parent_state = _task_local_state;
     _task_local_state = OCXXR_TEMP_NEW_ZERO(TaskLocalState);
     bookkeeping::AcquiredDbInfo *db_info = &_task_local_state->acquired_dbs;
-    ASSERT(db_info->acquired_db_count == 0);  // should do zero-init
+    assert(db_info->acquired_db_count == 0);  // should do zero-init
     _task_local_state->parent = parent_state;
 }
 
@@ -122,7 +122,7 @@ inline void AddDatablock(ocrGuid_t guid, void *base_address) {
     auto g_end = db_info->dbs_by_guid_end();
     if (!std::binary_search(g_start, g_end, DbPair(guid),
                             DbPair::CompareGuids)) {
-        ASSERT(db_info->acquired_db_count < OCXXR_MAX_DB_ACQUIRE_COUNT &&
+        assert(db_info->acquired_db_count < OCXXR_MAX_DB_ACQUIRE_COUNT &&
                "Acquired too many datablocks in one task");
         // OK, this is a new GUID that we should actually track...
         DbPair new_info(guid, base_address);
@@ -146,7 +146,7 @@ inline void RemoveDatablock(ocrGuid_t guid) {
     auto g_end = db_info->dbs_by_guid_end();
     auto i = std::lower_bound(g_start, g_end, DbPair(guid),
                               DbPair::CompareGuids);
-    ASSERT(ocrGuidIsEq(guid, i->guid()) &&
+    assert(ocrGuidIsEq(guid, i->guid()) &&
            "Released untracked non-null datablock");
     ptrdiff_t base_addr = i->base_addr();
     std::swap(i, --g_end);
@@ -155,7 +155,7 @@ inline void RemoveDatablock(ocrGuid_t guid) {
     auto a_end = db_info->dbs_by_addr_end();
     auto j = std::lower_bound(a_start, a_end, DbPair(base_addr),
                               DbPair::CompareBases);
-    ASSERT(base_addr == j->base_addr() &&
+    assert(base_addr == j->base_addr() &&
            "Matching base address for datablock GUID not found");
     std::swap(j, --a_end);
     std::sort(a_start, a_end, DbPair::CompareBases);
@@ -165,14 +165,14 @@ inline void RemoveDatablock(ocrGuid_t guid) {
 
 inline ptrdiff_t AddressForGuid(ocrGuid_t guid) {
     using bookkeeping::DbPair;
-    ASSERT(!ocrGuidIsNull(guid) && "Should not query for NULL_GUID");
+    assert(!ocrGuidIsNull(guid) && "Should not query for NULL_GUID");
     bookkeeping::AcquiredDbInfo *db_info = &_task_local_state->acquired_dbs;
     auto g_start = db_info->dbs_by_guid_start();
     auto g_end = db_info->dbs_by_guid_end();
     auto i = std::lower_bound(g_start, g_end, DbPair(guid),
                               DbPair::CompareGuids);
-    ASSERT(i != g_end && "Lookup of untracked non-null datablock");
-    ASSERT(ocrGuidIsEq(guid, i->guid()) && "Datablock lookup mismatch");
+    assert(i != g_end && "Lookup of untracked non-null datablock");
+    assert(ocrGuidIsEq(guid, i->guid()) && "Datablock lookup mismatch");
     return i->base_addr();
 }
 
@@ -196,12 +196,12 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
         ptrdiff_t src_addr = reinterpret_cast<ptrdiff_t>(source);
         auto j = std::upper_bound(a_start, a_end, DbPair(dst_addr),
                                   DbPair::CompareBases);
-        ASSERT(j != a_start);
+        assert(j != a_start);
         auto i = j - 1;
         ptrdiff_t end_addr = (j == a_end)
                                      ? std::numeric_limits<ptrdiff_t>::max()
                                      : j->base_addr();
-        ASSERT(i != a_end && i->base_addr() <= dst_addr &&
+        assert(i != a_end && i->base_addr() <= dst_addr &&
                dst_addr <= end_addr &&
                "Based pointer must point into an acquired datablock");
         if (embedded && i->base_addr() <= src_addr && src_addr <= end_addr) {
