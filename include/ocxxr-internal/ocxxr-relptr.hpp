@@ -46,6 +46,8 @@ class RelPtr {
 
     bool operator!() const { return offset_ == 0; }
 
+    bool operator==(const RelPtr &other) const { return get() == other.get(); }
+
     // TODO - implement math operators, like increment and decrement
 
  private:
@@ -127,6 +129,11 @@ class BasedPtr {
     operator RelPtr<T>() const { return get(); }
 
     bool operator!() const { return ocrGuidIsNull(target_guid_); }
+
+    bool operator==(const BasedPtr &other) const {
+        return ocrGuidIsEq(target_guid_, other.target_guid_) &&
+               offset_ == other.offset_;
+    }
 
     ocrGuid_t target_guid() const { return target_guid_; }
 
