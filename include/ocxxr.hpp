@@ -37,10 +37,10 @@ extern "C" {
 #include <ocxxr-internal/ocxxr-arena.hpp>
 
 #if OCXXR_USE_NATIVE_POINTERS
-#include <ocxxr-internal/ocxxr-relptr-native.hpp>
-#else
-#include <ocxxr-internal/ocxxr-relptr.hpp>
+#pragma message "Using native pointers (shared-memory only)"
 #endif  // OCXXR_USE_NATIVE_POINTERS
+
+#include <ocxxr-internal/ocxxr-relptr.hpp>
 
 #include <ocxxr-internal/ocxxr-relptr-util.hpp>
 

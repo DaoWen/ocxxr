@@ -77,6 +77,9 @@ struct SizeOf {
     static constexpr size_t Value = IsVoid<T>::Value ? 0 : sizeof(IfVoid<T>);
 };
 
+template <typename T>
+void Unused(const T &) {}
+
 // Check error status of C API call
 inline void OK(u8 status) { ASSERT(status == 0); }
 
@@ -103,6 +106,14 @@ inline ptrdiff_t AddressForGuid(ocrGuid_t);
 inline void GuidOffsetForAddress(const void *target, const void *source,
                                  ocrGuid_t *guid_out, ptrdiff_t *offset_out,
                                  bool embedded = false);
+
+inline ptrdiff_t CombineBaseOffset(ptrdiff_t base, ptrdiff_t offset) {
+#if OCXXR_USE_NATIVE_POINTERS
+    return internal::Unused(base), offset;
+#else   // !OCXXR_USE_NATIVE_POINTERS
+    return base + offset;
+#endif  // OCXXR_USE_NATIVE_POINTERS
+}
 
 }  // namespace internal
 }  // namespace ocxxr

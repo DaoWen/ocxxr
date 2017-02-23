@@ -61,7 +61,8 @@ class RelPtr {
         if (other == nullptr) {
             offset_ = 0;
         } else {
-            offset_ = reinterpret_cast<ptrdiff_t>(other) - base_ptr();
+            ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
+            offset_ = internal::CombineBaseOffset(-base_ptr(), ptr);
         }
     }
 
@@ -70,7 +71,7 @@ class RelPtr {
         if (offset_ == 0) {
             return nullptr;
         } else {
-            ptrdiff_t target = base_ptr() + offset_;
+            ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
             return reinterpret_cast<T *>(target);
         }
     }
@@ -172,11 +173,16 @@ class BasedPtr {
             return nullptr;
         } else if (embedded && ocrGuidIsUninitialized(target_guid_)) {
             // optimized case: treat as intra-datablock RelPtr
-            ptrdiff_t target = base_ptr() + offset_;
+            ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
             return reinterpret_cast<T *>(target);
         } else {
-            // normal case: inter-datablock pointer
-            ptrdiff_t target = internal::AddressForGuid(target_guid_) + offset_;
+// normal case: inter-datablock pointer
+#if OCXXR_USE_NATIVE_POINTERS
+            constexpr ptrdiff_t base = 0;
+#else   // !OCXXR_USE_NATIVE_POINTERS
+            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+#endif  // OCXXR_USE_NATIVE_POINTERS
+            ptrdiff_t target = internal::CombineBaseOffset(base, offset_);
             return reinterpret_cast<T *>(target);
         }
     }
