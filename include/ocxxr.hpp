@@ -36,7 +36,13 @@ extern "C" {
 
 #include <ocxxr-internal/ocxxr-arena.hpp>
 
+#if OCXXR_USE_NATIVE_POINTERS
+#include <ocxxr-internal/ocxxr-relptr-native.hpp>
+#else
 #include <ocxxr-internal/ocxxr-relptr.hpp>
+#endif  // OCXXR_USE_NATIVE_POINTERS
+
+#include <ocxxr-internal/ocxxr-relptr-util.hpp>
 
 #include <ocxxr-internal/ocxxr-task-state.hpp>
 
