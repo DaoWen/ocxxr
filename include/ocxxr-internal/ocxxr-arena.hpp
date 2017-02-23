@@ -51,6 +51,10 @@ class DatablockAllocator {
     // FIXME - I don't know if these alignment checks are sufficient,
     // especially if we do weird things like allocate a char[N]
     // so we have N bytes to store some struct or something.
+    // FIXME - use alignof() operator to do this correctly,
+    // and make a CreateFor<T>() for arenas to better calculate sizes
+    // based on a struct that you'd want to store inside,
+    // which would help calculate the needed alignment padding
     inline void *allocate(size_t size, size_t count) const {
         assert(size > 0);
         if (size == 1) {
