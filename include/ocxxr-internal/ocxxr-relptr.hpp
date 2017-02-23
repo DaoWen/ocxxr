@@ -3,6 +3,9 @@
 
 namespace ocxxr {
 
+template <typename T>
+class BasedPtr;
+
 /**
  * This is our "relative pointer" class.
  * You should be able to use it pretty much just like a normal pointer.
@@ -38,6 +41,8 @@ class RelPtr {
     T &operator[](const int index) const { return get()[index]; }
 
     operator T *() const { return get(); }
+
+    operator BasedPtr<T>() const { return get(); }
 
     bool operator!() const { return offset_ == 0; }
 
@@ -119,9 +124,22 @@ class BasedPtr {
 
     operator T *() const { return get(); }
 
+    operator RelPtr<T>() const { return get(); }
+
     bool operator!() const { return ocrGuidIsNull(target_guid_); }
 
     ocrGuid_t target_guid() const { return target_guid_; }
+
+    ArenaHandle<void> target_handle() const {
+        return ArenaHandle<void>(target_guid_);
+    }
+
+    Arena<void> target_arena() const {
+        void *ptr = reinterpret_cast<void *>(
+                internal::AddressForGuid(target_guid_));
+        ocrEdtDep_t dep = {.guid = target_guid_, .ptr = ptr};
+        return Arena<void>(dep);
+    }
 
     // TODO - implement math operators, like increment and decrement
 
