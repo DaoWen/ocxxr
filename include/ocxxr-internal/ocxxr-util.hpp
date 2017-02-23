@@ -77,8 +77,8 @@ struct SizeOf {
     static constexpr size_t Value = IsVoid<T>::Value ? 0 : sizeof(IfVoid<T>);
 };
 
-template <typename T>
-void Unused(const T &) {}
+template <typename... Ts>
+void Unused(const Ts &...) {}
 
 // Check error status of C API call
 inline void OK(u8 status) { assert(status == 0); }
