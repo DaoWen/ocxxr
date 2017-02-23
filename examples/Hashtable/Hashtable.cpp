@@ -28,23 +28,23 @@ struct HashtableHelper {
     typedef ocxxr::Datablock<HashtableOpParams> ParamsDb;
 
     class BucketBlock;
-    static void BucketSearcherTask(ParamsDb, ocxxr::Arena<BucketBlock>);
+    static void BucketSearcherTask(ocxxr::BasedPtr<BucketBlock> block,
+                                   ParamsDb params, ocxxr::Arena<void>);
 
-    // FIXME - should be using BasedPtr class here...?
-    typedef ocxxr::Datablock<ocxxr::ArenaHandle<BucketBlock>> BucketDb;
-    typedef decltype(std::declval<BucketDb>().handle()) BucketHandle;
+    typedef ocxxr::Datablock<ocxxr::BasedPtr<BucketBlock>> BucketDb;
+    typedef ocxxr::BasedPtr<ocxxr::BasedPtr<BucketBlock>> BucketPtr;
 
     struct HashtableOpParams {
-        BucketHandle bucketHead;
-        ocxxr::ArenaHandle<BucketBlock> firstBlock;
-        ocxxr::ArenaHandle<BucketBlock> oldFirstBlock;
+        BucketPtr bucketHead;
+        ocxxr::BasedPtr<BucketBlock> firstBlock;
+        ocxxr::BasedPtr<BucketBlock> oldFirstBlock;
         ocrGuid_t affinity;
-        HashtableOpRole role;  // FIXME - remove (or only enable in debug mode)
+        HashtableOpRole role;  // TODO - remove (or only enable in debug mode)
         bool checkedFirst;
         bool firstBlockFull;
         ocxxr::TaskTemplate<decltype(BucketSearcherTask)> searcher;
-        // FIXME - could do union of output and value (never need both)
-        ocxxr::DataHandle<V> output;
+        // TODO - could do union of output and value (never need both)
+        ocxxr::BasedPtr<V> output;
         ocxxr::Event<void> sync;
         // Key/Value pair
         K key;
@@ -66,14 +66,6 @@ struct HashtableHelper {
         u32 count() const { return count_; }
         bool is_full() const { return count_ == kItemsPerBlock; }
         const ocxxr::BasedPtr<BucketBlock> &next() const { return next_; }
-
-        BucketBlock(ocxxr::Arena<void> arena,
-                    ocxxr::ArenaHandle<BucketBlock> next)
-                : count_(0),
-                  next_(ocxxr::BasedPtr<BucketBlock>(
-                          next.guid(), ocxxr::Arena<void>::kHeaderSize)),
-                  keys_(arena.NewArray<K>(kItemsPerBlock)),
-                  values_(arena.NewArray<V>(kItemsPerBlock)) {}
 
         BucketBlock(ocxxr::Arena<void> arena, ocxxr::BasedPtr<BucketBlock> next)
                 : count_(0),
@@ -115,7 +107,8 @@ struct HashtableHelper {
                                           sizeof(V[kItemsPerBlock]);
 
     // Add a new block to the bucket
-    static void BlockAdderTask(ParamsDb params, BucketDb bucket) {
+    static void BlockAdderTask(BucketPtr bucket, ParamsDb params,
+                               ocxxr::Arena<void>) {
         assert(params->role == kRolePutter);
         // is our first block still first?
         if (*bucket == params->firstBlock) {
@@ -123,7 +116,7 @@ struct HashtableHelper {
             auto block_arena = ocxxr::Arena<BucketBlock>::Create(kBlockBytes);
             auto block = block_arena.template New<BucketBlock>(
                     block_arena.Untyped(), params->firstBlock);
-            *bucket = block_arena;
+            *bucket = block;
             block->Insert(params->key, params->value);
             // ALL DONE!
             Finalize(params);
@@ -132,23 +125,25 @@ struct HashtableHelper {
             params->oldFirstBlock = params->firstBlock;
             params->firstBlock = *bucket;
             params->checkedFirst = false;
-            params->searcher().CreateTask(params, *bucket);
+            auto block = *bucket;
+            params->searcher().CreateTask(block, params, block.target_handle());
         }
     }
 
     // FIXME - should be method on a Bucket class???
     static void AddBlockToBucket(const ParamsDb &params) {
         assert(params->role == kRolePutter);
+        auto bucket = params->bucketHead;
         auto adder_template = OCXXR_TEMPLATE_FOR(BlockAdderTask);
-        auto task = adder_template().CreateTaskPartial(params);
-        task.template DependOn<1>(params->bucketHead,
+        auto task = adder_template().CreateTaskPartial(bucket, params);
+        task.template DependOn<1>(bucket.target_handle(),
                                   ocxxr::AccessMode::kExclusive);
         adder_template.Destroy();
     }
 
     // Add a new entry to the head block in this bucket
-    static void EntryInserterTask(ParamsDb params,
-                                  ocxxr::Arena<BucketBlock> block) {
+    static void EntryInserterTask(ocxxr::BasedPtr<BucketBlock> block,
+                                  ParamsDb params, ocxxr::Arena<void>) {
         assert(params->role == kRolePutter);
         // is it in this block?
         u32 i = block->Find(params->key);
@@ -170,30 +165,30 @@ struct HashtableHelper {
 
     // FIXME - should be method on a Block class?
     static void InsertEntryIntoBlock(
-            const ParamsDb &params,
-            const ocxxr::ArenaHandle<BucketBlock> &block) {
+            const ParamsDb &params, const ocxxr::BasedPtr<BucketBlock> &block) {
         assert(params->role == kRolePutter);
         // try to update entry in this block
         // (writing V might not be atomic, so we need exclusive access)
         auto inserter_template = OCXXR_TEMPLATE_FOR(EntryInserterTask);
-        auto task = inserter_template().CreateTaskPartial(params);
-        task.template DependOn<1>(block, ocxxr::AccessMode::kExclusive);
+        auto task = inserter_template().CreateTaskPartial(block, params);
+        task.template DependOn<1>(block.target_handle(),
+                                  ocxxr::AccessMode::kExclusive);
         inserter_template.Destroy();
     }
 
     // FIXME - it would be great if Output was a BasedPtr,
     // so you can write the output to an arbitrary location
     // in an arbitrary datablock (instead of the first byte)
-    static void OutputSetterTask(ocxxr::BasedPtr<V> ptr, ParamsDb params,
-                                 ocxxr::Datablock<V> output,
-                                 ocxxr::Arena<void>) {
+    static void OutputSetterTask(ocxxr::BasedPtr<V> val, ParamsDb params,
+                                 ocxxr::Arena<void> valdb, ocxxr::Arena<void>) {
         assert(params->role == kRoleGetter);
+        auto output = params->output;
         if (kHashtableVerbose) {
             PRINTF("Writing output into " GUIDF " %p from " GUIDF ", %p...\n",
-                   GUIDA(output.handle().guid()), output.data_ptr(),
-                   GUIDA(ptr.target_guid()), static_cast<V *>(ptr));
+                   GUIDA(output.target_guid()), &*output,
+                   GUIDA(val.target_guid()), &*val);
         }
-        if (!ptr) {
+        if (!val) {
             if (kHashtableVerbose) {
                 PRINTF("Null Out\n");
             }
@@ -203,9 +198,9 @@ struct HashtableHelper {
             if (kHashtableVerbose) {
                 PRINTF("Non-null Out\n");
             }
-            *output = *ptr;
+            *output = *val;
         }
-        output.Release();
+        valdb.Release();
         // ALL DONE!
         Finalize(params);
     }
@@ -214,13 +209,13 @@ struct HashtableHelper {
                           const ocxxr::BasedPtr<V> &ptr) {
         assert(params->role == kRoleGetter);
         auto out_template = OCXXR_TEMPLATE_FOR(OutputSetterTask);
-        auto arena = ocxxr::ArenaHandle<void>(ptr.target_guid());
-        out_template().CreateTask(ptr, params, params->output, arena);
+        out_template().CreateTask(ptr, params, params->output.target_handle(),
+                                  ptr.target_handle());
         out_template.Destroy();
     }
 
-    static void BucketGetSearcherTask(ParamsDb params,
-                                      ocxxr::Arena<BucketBlock> block) {
+    static void BucketGetSearcherTask(ocxxr::BasedPtr<BucketBlock> block,
+                                      ParamsDb params, ocxxr::Arena<void>) {
         assert(params->role == kRoleGetter);
         if (kHashtableVerbose) {
             PRINTF("Searching bucket block (get)...\n");
@@ -234,17 +229,15 @@ struct HashtableHelper {
         u32 i = block->Find(params->key);
         if (i != kNotFound) {  // Found!
             // read existing entry's value
-            // params->output.Satisfy(block->ValueAt(i));
             SetOutput(params, &block->ValueAt(i));
             // ALL DONE!
-        } else if (!block->next() || block.handle() == params->oldFirstBlock) {
+        } else if (!block->next() || block == params->oldFirstBlock) {
             // not found: return null
             SetOutput(params, nullptr);  // FIXME - this doesn't work
         } else {
             // keep looking...
-            auto next = ocxxr::ArenaHandle<BucketBlock>(
-                    block->next().target_guid());
-            params->searcher().CreateTask(params, next);
+            auto next = block->next();
+            params->searcher().CreateTask(next, params, next.target_handle());
         }
     }
 
@@ -252,8 +245,8 @@ struct HashtableHelper {
                                decltype(BucketGetSearcherTask)>::value,
                   "Expecting consistent function signature");
 
-    static void BucketPutSearcherTask(ParamsDb params,
-                                      ocxxr::Arena<BucketBlock> block) {
+    static void BucketPutSearcherTask(ocxxr::BasedPtr<BucketBlock> block,
+                                      ParamsDb params, ocxxr::Arena<void>) {
         assert(params->role == kRolePutter);
         // record first block size (if applicable)
         if (!params->checkedFirst) {
@@ -266,7 +259,7 @@ struct HashtableHelper {
             // try to update entry in this block
             // (writing V might not be atomic, so we need exclusive access)
             InsertEntryIntoBlock(params, block);
-        } else if (!block->next() || block.handle() == params->oldFirstBlock) {
+        } else if (!block->next() || block == params->oldFirstBlock) {
             // Didn't find it, so we need to try to add a new entry...
             if (params->firstBlockFull) {
                 // need to add a new block to the bucket (first block was full)
@@ -277,9 +270,8 @@ struct HashtableHelper {
             }
         } else {
             // keep looking...
-            auto next = ocxxr::ArenaHandle<BucketBlock>(
-                    block->next().target_guid());
-            params->searcher().CreateTask(params, next);
+            auto next = block->next();
+            params->searcher().CreateTask(next, params, next.target_handle());
         }
     }
 
@@ -287,7 +279,8 @@ struct HashtableHelper {
                                decltype(BucketPutSearcherTask)>::value,
                   "Expecting consistent function signature");
 
-    static void BucketEntryTask(ParamsDb params, BucketDb bucket) {
+    static void BucketEntryTask(BucketPtr bucket, ParamsDb params,
+                                ocxxr::Arena<void>) {
         if (params->role == kRoleGetter) {
             if (kHashtableVerbose) {
                 PRINTF("Searching bucket (get)...\n");
@@ -299,7 +292,7 @@ struct HashtableHelper {
         }
         // save bucket info for first block
         params->firstBlock = *bucket;
-        if (params->firstBlock.is_null()) {  // empty bucket
+        if (!params->firstBlock) {  // empty bucket
             if (params->role == kRolePutter) {
                 // need to add a new block to the bucket
                 AddBlockToBucket(params);
@@ -308,15 +301,15 @@ struct HashtableHelper {
                 SetOutput(params, nullptr);  // FIXME - this doesn't work
             }
         } else {  // search the bucket
-            params->searcher().CreateTask(params, params->firstBlock);
+            auto block = params->firstBlock;
+            params->searcher().CreateTask(block, params, block.target_handle());
         }
     }
 
-    static void HasherTask(ocxxr::BasedPtr<BucketHandle> buckets,
-                           ParamsDb params, ocxxr::Arena<void>) {
+    static void HasherTask(ocxxr::BasedPtr<BucketPtr> buckets, ParamsDb params,
+                           ocxxr::Arena<void>) {
         if (kHashtableVerbose) {
-            char role[] = {params->role, '\0'};
-            PRINTF("Hashing for bucket (%s)...\n", role);
+            PRINTF("Hashing for bucket...\n");
         }
         // find the the bucket index
         // TODO - switch to std::hash
@@ -327,7 +320,7 @@ struct HashtableHelper {
         }
         // save bucket info
         params->bucketHead = buckets[index];
-        params->oldFirstBlock = ocxxr::NullHandle();
+        params->oldFirstBlock = nullptr;
         params->checkedFirst = false;
 // affinity
 // FIXME - affinitizing each bucket with node, and running all the
@@ -340,7 +333,8 @@ struct HashtableHelper {
         params.Release();
         // go into the bucket
         auto bucket_template = OCXXR_TEMPLATE_FOR(BucketEntryTask);
-        bucket_template().CreateTask(params, params->bucketHead);
+        auto bucket = params->bucketHead;
+        bucket_template().CreateTask(bucket, params, bucket.target_handle());
         bucket_template.Destroy();
     }
 };
@@ -350,7 +344,7 @@ class Hashtable {
  public:
     typedef HashtableHelper<K, V> Helper;
     typedef typename Helper::ParamsDb ParamsDb;
-    typedef typename Helper::BucketHandle BucketHandle;
+    typedef typename Helper::BucketPtr BucketPtr;
     typedef typename Helper::BucketDb BucketDb;
     static constexpr u32 kHashBucketCount = Helper::kHashBucketCount;
 
@@ -367,7 +361,7 @@ class Hashtable {
         OpHelper(params);
     }
 
-    void Get(const K &key, ocxxr::DataHandle<V> out, ocxxr::Event<void> sync) {
+    void Get(const K &key, ocxxr::BasedPtr<V> out, ocxxr::Event<void> sync) {
         if (kHashtableVerbose) {
             PRINTF("Starting get op...\n");
         }
@@ -382,9 +376,10 @@ class Hashtable {
 
     static ocxxr::Arena<Hashtable> Create() {
         constexpr size_t bytes =
-                sizeof(Hashtable) + sizeof(BucketHandle) * kHashBucketCount;
-        auto arena = ocxxr::Arena<Hashtable>::Create(bytes);
-        arena.template New<Hashtable>(arena.Untyped());
+                sizeof(Hashtable) + sizeof(*buckets_) * kHashBucketCount;
+        // XXX - adding 32 extra bytes for alignment padding
+        auto arena = ocxxr::Arena<Hashtable>::Create(bytes + 32);
+        CreateIn(arena.Untyped());
         return arena;
     }
 
@@ -393,33 +388,28 @@ class Hashtable {
     }
 
     Hashtable(ocxxr::Arena<void> arena) {
-        auto buckets = arena.template NewArray<BucketHandle>(kHashBucketCount);
+        auto buckets = arena.template NewArray<BucketPtr>(kHashBucketCount);
         for (u32 i = 0; i < kHashBucketCount; i++) {
             auto bucket = BucketDb::Create();
-            *bucket = ocxxr::NullHandle();
-            buckets[i] = bucket;
+            *bucket = nullptr;
+            buckets[i] = bucket.data_ptr();
             bucket.Release();
         }
         buckets_ = buckets;
     }
 
  private:
-    ocxxr::RelPtr<BucketHandle> buckets_;
+    ocxxr::RelPtr<BucketPtr> buckets_;
 
     void OpHelper(ParamsDb params) {
         assert(params->role != kRoleInvalid);
         params.Release();
         // FIXME - doing this extra lookup once per op seems bad...?
         // but it might be good to leave for benchmarking
-        ocxxr::BasedPtr<BucketHandle> buckets =
-                // FIXME - add direct conversion between pointer types
-                static_cast<BucketHandle *>(buckets_);
-        assert(!ocrGuidIsError(buckets.target_guid()));
-        assert(!ocrGuidIsUninitialized(buckets.target_guid()));
+        ocxxr::BasedPtr<BucketPtr> buckets = buckets_;
         // Start searching...
-        auto arena = ocxxr::ArenaHandle<void>(buckets.target_guid());
         auto hasher_template = OCXXR_TEMPLATE_FOR(Helper::HasherTask);
-        hasher_template().CreateTask(buckets, params, arena);
+        hasher_template().CreateTask(buckets, params, buckets.target_handle());
         hasher_template.Destroy();
     }
 
@@ -443,7 +433,7 @@ void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
     auto end_template = OCXXR_TEMPLATE_FOR(FinalTask);
     end_template().CreateTask(table.Untyped(), result, sync);
     end_template.Destroy();
-    table->Get(6, result, sync);
+    table->Get(6, result.data_ptr(), sync);
     if (kHashtableVerbose) {
         PRINTF("Done with gets\n");
     }
