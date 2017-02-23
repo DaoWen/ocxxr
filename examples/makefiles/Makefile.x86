@@ -76,7 +76,7 @@ SRCS := $(TARGET).cpp
 # Additional CFLAGS. By default, it includes
 # all OCR required includes and $(APPS_LIBS_INSTALL)/include
 # TG_ARCH is also defined for Fsim
-CFLAGS := -I$(OCXXR_LIB_ROOT)/include
+CFLAGS += -I$(OCXXR_LIB_ROOT)/include
 CFLAGS += -Wall -Wextra
 # Additional LDFLAGS. By default, it includes
 # the required OCR library path and $(APPS_LIBS_INSTALL)/lib
