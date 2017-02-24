@@ -9,6 +9,15 @@
 
 #include <cstdlib>
 
+#ifdef MEASURE_TIME
+#include <ctime>
+#include <ratio>
+#include <chrono>
+using namespace std::chrono;
+
+high_resolution_clock::time_point start;
+#endif
+
 enum HashtableOpRole {
     kRoleInvalid = 'X',
     kRoleGetter = 'G',
@@ -421,7 +430,12 @@ void FinalTask(ocxxr::Arena<void> table, ocxxr::Datablock<char> result,
     table.Destroy();  // FIXME - should do deep destroy
     char res_str[] = {*result ? *result : 'X', '\0'};
     PRINTF("Result = %s\n", res_str);
-    ocxxr::Shutdown();
+#ifdef MEASURE_TIME
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(end - start);
+	PRINTF("elased time: %fs\n", time_span.count());
+#endif
+	ocxxr::Shutdown();
 }
 
 void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
@@ -440,6 +454,10 @@ void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
 }
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
+#ifdef MEASURE_TIME
+    start = high_resolution_clock::now();
+#endif
+
     u32 n;
     if (args->argc() != 2) {
         n = 100000;
@@ -450,7 +468,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 
     auto table = Hashtable<u64, char>::Create();
 
-    constexpr u64 kPutCount = 10;
+   	constexpr u64 kPutCount = 10000;
     auto puts_latch = ocxxr::LatchEvent<void>::Create(kPutCount);
 
     auto getter_template = OCXXR_TEMPLATE_FOR(GetterTask);
