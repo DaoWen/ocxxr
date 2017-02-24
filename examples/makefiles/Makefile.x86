@@ -129,6 +129,9 @@ postrun: ;
 
 # Any additional rules required can go here
 
+# We just want to build our app (don't try to build OCR)
+RUN_MODE := buildApp
+
 # Include common part
 include $(APPS_ROOT)/makefiles/make-inc.inc
 
