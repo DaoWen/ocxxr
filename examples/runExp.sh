@@ -13,7 +13,6 @@ for dir in *; do
 		printf "\n\n> Running test %s\n\n" $dir
 	    pushd $dir > /dev/null
 		CONFIG_THREAD_NUM=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 clean run | awk '/elased time:/'
-		#make -f Makefile.x86 run
 		popd > /dev/null
 	fi
 done
@@ -25,7 +24,6 @@ for dir in *; do
 		printf "\n\n> Running test %s\n\n" $dir
 	    pushd $dir > /dev/null
 		CONFIG_THREAD_NUM=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DOCXXR_USE_NATIVE_POINTERS=1 -DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 clean run | awk '/elased time:/'
-		#make -f Makefile.x86 run
 		popd > /dev/null
 	fi
 done
