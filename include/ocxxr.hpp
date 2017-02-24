@@ -19,6 +19,12 @@ extern "C" {
 #include <type_traits>
 #include <utility>
 
+// Fix problem where disabling assertions causes unused variable warnings
+#ifdef NDEBUG
+#undef assert
+#define assert(x) ((void)sizeof(x))
+#endif
+
 #ifndef OCXXR_USING_CXX14
 // Need C++11 compatibility
 #include <ocxxr-internal/ocxxr-cxx11-compat.hpp>
