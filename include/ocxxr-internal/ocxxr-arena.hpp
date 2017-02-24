@@ -255,7 +255,10 @@ class Arena : public AcquiredData {
 
     ArenaHandle<T> handle() const { return handle_; }
 
-    void Release() const { internal::OK(ocrDbRelease(handle_.guid())); }
+    void Release() const {
+        internal::OK(ocrDbRelease(handle_.guid()));
+        internal::bookkeeping::RemoveDatablock(handle_.guid());
+    }
 
     operator ArenaHandle<T>() const { return handle(); }
 
