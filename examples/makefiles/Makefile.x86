@@ -73,8 +73,8 @@ SRCS := $(TARGET).cpp
 # Additional CFLAGS. By default, it includes
 # all OCR required includes and $(APPS_LIBS_INSTALL)/include
 # TG_ARCH is also defined for Fsim
-CFLAGS += -I$(OCXXR_LIB_ROOT)/include
-CFLAGS += -Wall -Wextra
+CXXFLAGS += -I$(OCXXR_LIB_ROOT)/include
+CXXFLAGS += -Wall -Wextra
 # Additional LDFLAGS. By default, it includes
 # the required OCR library path and $(APPS_LIBS_INSTALL)/lib
 # Note that none of the specific libraries specified in
@@ -86,11 +86,11 @@ LDFLAGS := -lpthread $(EXTRALDFLAGS)
 #   - debug:   Build the debug version of the application
 #   - install: Build and install
 #   - run:     Run the application
-all:	CFLAGS += -O2
+all:	CXXFLAGS += -O2
 all:	TARGETS := all
 all:	default
 
-debug:	CFLAGS += -O0
+debug:	CXXFLAGS += -O0
 debug:	TARGETS := debug
 debug:	default
 
@@ -145,26 +145,26 @@ CHECK_CXX_OPT_SUPPORT := echo | $(CXX) -fsyntax-only -xc++ -
 
 # Try C++14, otherwise fall back to C++11
 ifeq ($(shell $(CHECK_CXX_OPT_SUPPORT) -std=c++14 2>&1),)
-CFLAGS += -std=c++14
+CXXFLAGS += -std=c++14
 else
 $(info No C++14 support. Falling back to C++11.)
-CFLAGS += -std=c++11
+CXXFLAGS += -std=c++11
 endif
 
 ERROR_LIMIT := 4
 
 # Try C++14, otherwise fall back to C++11
 ifeq ($(shell $(CHECK_CXX_OPT_SUPPORT) -ferror-limit=1 2>&1),)
-CFLAGS += -ferror-limit=$(ERROR_LIMIT) # clang
+CXXFLAGS += -ferror-limit=$(ERROR_LIMIT) # clang
 else
-CFLAGS += -fmax-errors=$(ERROR_LIMIT) # gcc
+CXXFLAGS += -fmax-errors=$(ERROR_LIMIT) # gcc
 # GCC needs this, otherwise integer format macros are missing
-CFLAGS += -D__STDC_FORMAT_MACROS
+CXXFLAGS += -D__STDC_FORMAT_MACROS
 endif
 
 # always color the output (even when piped)
-#CFLAGS += -fdiagnostics-color=always
+#CXXFLAGS += -fdiagnostics-color=always
 
 # Address sanitizer (clang)
-#CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+#CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
 #LDFLAGS += -fsanitize=address
