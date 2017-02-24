@@ -150,6 +150,7 @@ inline void RemoveDatablock(ocrGuid_t guid) {
            "Released untracked non-null datablock");
     ptrdiff_t base_addr = i->base_addr();
     std::swap(i, --g_end);
+    --db_info->acquired_db_count;
     std::sort(g_start, g_end, DbPair::CompareGuids);
     auto a_start = db_info->dbs_by_addr_start();
     auto a_end = db_info->dbs_by_addr_end();
