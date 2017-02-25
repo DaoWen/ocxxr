@@ -3,45 +3,45 @@
 
 namespace ocxxr {
 
+// FIXME - should also support conversion to superclass pointer types
+// e.g., BasedPtr<Y> y = ...; BasedPtr<X> x = y; should work if Y extends X
+
 template <typename T>
 class RelPtr;
 
-/**
- * This is our "based pointer" class.
- * You should be able to use it pretty much just like a normal pointer.
- * This class is safer than RelPtr, but not as efficient.
- */
-template <typename T>
-class BasedPtr {
- public:
-    constexpr BasedPtr() : target_guid_(ERROR_GUID), offset_(0) {}
+namespace internal {
 
-    BasedPtr(ocrGuid_t target, ptrdiff_t offset)
+template <typename T, bool embedded>
+class BasedPtrImpl {
+ public:
+    constexpr BasedPtrImpl() : target_guid_(ERROR_GUID), offset_(0) {}
+
+    BasedPtrImpl(ocrGuid_t target, ptrdiff_t offset)
             : target_guid_(target), offset_(offset) {}
 
-#if 0  // DISABLED
-    BasedPtr(const BasedPtr &other) { set(other); }
-#endif
+    template <typename U = T, EnableIf<embedded && std::is_same<T, U>::value> = 0>
+    BasedPtrImpl(const BasedPtrImpl &other) { set(other); }
 
-    BasedPtr(const BasedPtr &) = default;
+    // Should be auto-generated if above version is disabled
+    // BasedPtrImpl(const BasedPtrImpl &) = default;
 
-    BasedPtr(const T *other) { set(other); }
+    BasedPtrImpl(const T *other) { set(other); }
 
     // TODO - ensure that default assignment operator still works correctly
     // must handle special cases too
-    BasedPtr &operator=(const T *other) {
+    BasedPtrImpl &operator=(const T *other) {
         set(other);
         return *this;
     }
 
-#if 0  // DISABLED
-    BasedPtr &operator=(const BasedPtr &other) {
+    template <typename U = T, EnableIf<embedded && std::is_same<T, U>::value> = 0>
+    BasedPtrImpl &operator=(const BasedPtrImpl &other) {
         set(other);
         return *this;
     }
-#endif
 
-    BasedPtr &operator=(const BasedPtr &) = default;
+    // Should be auto-generated if above version is disabled
+    // BasedPtrImpl &operator=(const BasedPtrImpl &) = default;
 
     T &operator*() const { return *get(); }
 
@@ -53,9 +53,12 @@ class BasedPtr {
 
     operator RelPtr<T>() const { return get(); }
 
+    // Allow conversion from optimized "embedded" case to general case
+    operator BasedPtrImpl<T, false>() const { return get(); }
+
     bool operator!() const { return ocrGuidIsNull(target_guid_); }
 
-    bool operator==(const BasedPtr &other) const {
+    bool operator==(const BasedPtrImpl &other) const {
         return ocrGuidIsEq(target_guid_, other.target_guid_) &&
                offset_ == other.offset_;
     }
@@ -82,7 +85,7 @@ class BasedPtr {
  protected:
     ptrdiff_t base_ptr() const { return reinterpret_cast<ptrdiff_t>(this); }
 
-    void set(const BasedPtr &other, bool embedded = false) {
+    void set(const BasedPtrImpl &other) {
         if (embedded && ocrGuidIsUninitialized(other.target_guid_)) {
             set(other.get());
         } else {
@@ -91,12 +94,12 @@ class BasedPtr {
         }
     }
 
-    void set(const T *other, bool embedded = false) {
+    void set(const T *other) {
         internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_,
                                        embedded);
     }
 
-    T *get(bool embedded = false) const {
+    T *get() const {
         assert(!ocrGuidIsError(target_guid_));
         if (ocrGuidIsNull(target_guid_)) {
             return nullptr;
@@ -116,6 +119,26 @@ class BasedPtr {
         }
     }
 };
+
+}  // namespace internal
+
+/**
+ * This is our "based pointer" class.
+ * You should be able to use it pretty much just like a normal pointer.
+ * This class is safer than RelPtr, but not as efficient.
+ */
+template <typename T>
+using BasedPtr = internal::BasedPtrImpl<T, false>;
+
+/**
+ * This is our "based datablock pointer" class.
+ * Behaves like a BasedPtr in most cases, but can be optimized
+ * to behave like a RelPtr if this and the target object
+ * are in the same datablock. As a consequence, these pointer
+ * objects may only be allocated within an acquired datablock.
+ */
+template <typename T>
+using BasedDbPtr = internal::BasedPtrImpl<T, true>;
 
 /**
  * This is our "relative pointer" class.
