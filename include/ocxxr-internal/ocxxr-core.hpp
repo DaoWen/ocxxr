@@ -103,8 +103,6 @@ class DatablockHandle : public DataHandle<T> {
     static ocrGuid_t Init(T **data_ptr, u64 bytes, bool acquire,
                           const DatablockHint *hint) {
         ocrGuid_t guid;
-        // FIXME - look into this bug
-        assert(acquire && "OCR currently has a bug with NO_ACQUIRE");
         const u16 flags = acquire ? DB_PROP_NONE : DB_PROP_NO_ACQUIRE;
         // TODO - open bug for adding const qualifiers in OCR C API.
         // E.g., "const ocrHint_t *hint" in ocrDbCreate.
@@ -114,6 +112,11 @@ class DatablockHandle : public DataHandle<T> {
                                  NO_ALLOC));
         if (acquire) {
             internal::bookkeeping::AddDatablock(guid, *raw_data_ptr);
+        } else {
+            // FIXME - look into this bug
+            // assert(acquire && "OCR currently has a bug with NO_ACQUIRE");
+            // Need to release the DB now since we weren't supposed to acquire
+            internal::OK(ocrDbRelease(guid));
         }
         return guid;
     }
