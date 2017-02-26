@@ -112,7 +112,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 
     u32 n;
     if (args->argc() != 2) {
-        n = 10;
+        n = 20;
         PRINTF("Usage: fib <num>, defaulting to %" PRIu32 "\n", n);
     } else {
         n = atoi(args->argv(1));

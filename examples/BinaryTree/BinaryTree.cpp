@@ -101,6 +101,10 @@ class BinaryTree {
     };
 };
 
+u64 hash(u64 x) {
+    return x * 11400714819323198549UL;
+}
+
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 #ifdef MEASURE_TIME
     start = high_resolution_clock::now();
@@ -115,13 +119,12 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     }
 
     auto tree = BinaryTree<u64, char>::Create();
-    auto hash = std::hash<u64>{};
 
     //
     // Puts
     //
 
-    constexpr u64 kPutCount = 10;
+    constexpr u64 kPutCount = 100000;
 
     if (kVerboseMessages) {
         PRINTF("Starting puts\n");

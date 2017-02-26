@@ -51,7 +51,7 @@ ax.set_xticks(ind + W / 2)
 ax.set_xticklabels(keys)
 plt.xlabel("Benchmark")
 plt.ylabel("Execution Time (seconds)")
-plt.legend((rects0, rects1), ('native', 'offset'), loc='upper right').draw_frame(False)
+plt.legend((rects0, rects1), ('offset', 'native'), loc='upper right').draw_frame(False)
 plt.savefig(filename + '.eps', bbox_inches='tight', format='eps')
 
 
