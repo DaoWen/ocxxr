@@ -1,6 +1,12 @@
 #ifndef OCXXR_RELPTR_HPP_
 #define OCXXR_RELPTR_HPP_
 
+#ifdef INSTRUMENT_POINTER_OP
+#include <atomic>
+#include <iostream>
+using namespace::std;
+#endif
+
 namespace ocxxr {
 
 // FIXME - should also support conversion to superclass pointer types
@@ -10,6 +16,28 @@ template <typename T>
 class RelPtr;
 
 namespace internal {
+#ifdef INSTRUMENT_POINTER_OP
+    atomic<u64> rp_indirect_count(0), rp_arrow_count(0), rp_subscript_count(0), rp_cast_count(0), rp_equal_count(0), rp_assign_count(0), rp_negate_count(0);
+	atomic<u64> bp_indirect_count(0), bp_arrow_count(0), bp_subscript_count(0), bp_cast_count(0), bp_equal_count(0), bp_assign_count(0), bp_negate_count(0);
+    void outputAllCount() {
+	    cout << "bp_equal_count " << bp_equal_count.load() << endl;
+		cout << "bp_indirect_count " << bp_indirect_count.load() << endl;
+		cout << "bp_arrow_count " << bp_arrow_count.load() << endl;
+		cout << "bp_subscript_count " << bp_subscript_count.load() << endl;
+		cout << "bp_cast_count " << bp_cast_count.load() << endl;
+		cout << "bp_assign_count " << bp_assign_count.load() << endl;
+		cout << "bp_negate_count " << bp_negate_count.load() << endl;
+
+		cout << "rp_equal_count " << rp_equal_count.load() << endl;
+		cout << "rp_indirect_count " << rp_indirect_count.load() << endl;
+		cout << "rp_arrow_count " << rp_arrow_count.load() << endl;
+		cout << "rp_subscript_count " << rp_subscript_count.load() << endl;
+		cout << "rp_cast_count " << rp_cast_count.load() << endl;
+		cout << "rp_assign_count " << rp_assign_count.load() << endl;
+		cout << "rp_negate_count " << rp_negate_count.load() << endl;
+
+	}
+#endif
 
 template <typename T, bool embedded>
 class BasedPtrImpl {
@@ -30,12 +58,18 @@ class BasedPtrImpl {
     // TODO - ensure that default assignment operator still works correctly
     // must handle special cases too
     BasedPtrImpl &operator=(const T *other) {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_assign_count++;
+#endif
         set(other);
         return *this;
     }
 
     template <typename U = T, EnableIf<embedded && std::is_same<T, U>::value> = 0>
     BasedPtrImpl &operator=(const BasedPtrImpl &other) {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_assign_count++;
+#endif
         set(other);
         return *this;
     }
@@ -43,22 +77,60 @@ class BasedPtrImpl {
     // Should be auto-generated if above version is disabled
     // BasedPtrImpl &operator=(const BasedPtrImpl &) = default;
 
-    T &operator*() const { return *get(); }
+    T &operator*() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_indirect_count++;
+#endif
+		return *get(); 
+	}
 
-    T *operator->() const { return get(); }
+    T *operator->() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_arrow_count++;
+#endif   
+		return get();
+	}
 
-    T &operator[](const int index) const { return get()[index]; }
+    T &operator[](const int index) const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_subscript_count++;
+#endif   	    
+		return get()[index];
+    }
 
-    operator T *() const { return get(); }
+    operator T *() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_cast_count++;
+#endif   	    
+		return get(); 
+	}
 
-    operator RelPtr<T>() const { return get(); }
+    operator RelPtr<T>() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_cast_count++;
+#endif
+	    return get(); 
+	}
 
     // Allow conversion from optimized "embedded" case to general case
-    operator BasedPtrImpl<T, false>() const { return get(); }
+    operator BasedPtrImpl<T, false>() const {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_cast_count++;
+#endif
+	    return get(); 
+	}
 
-    bool operator!() const { return ocrGuidIsNull(target_guid_); }
+    bool operator!() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        bp_negate_count++;
+#endif
+	    return ocrGuidIsNull(target_guid_); 
+    }
 
     bool operator==(const BasedPtrImpl &other) const {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_equal_count++;
+#endif
         return ocrGuidIsEq(target_guid_, other.target_guid_) &&
                offset_ == other.offset_;
     }
@@ -159,28 +231,69 @@ class RelPtr {
 
     // TODO - ensure that default assignment operator still works correctly
     RelPtr<T> &operator=(const RelPtr &other) {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_assign_count++;
+#endif   
         set(other);
         return *this;
     }
 
     RelPtr<T> &operator=(const T *other) {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_assign_count++;
+#endif   
         set(other);
         return *this;
     }
 
-    T &operator*() const { return *get(); }
+    T &operator*() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_indirect_count++;
+#endif   
+	    return *get(); 
+	}
 
-    T *operator->() const { return get(); }
+    T *operator->() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_arrow_count++;
+#endif   
+	    return get(); 
+	}
 
-    T &operator[](const int index) const { return get()[index]; }
+    T &operator[](const int index) const {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_subscript_count++;
+#endif   
+        return get()[index]; 
+	}
 
-    operator T *() const { return get(); }
+    operator T *() const { 
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_cast_count++;
+#endif   
+        return get(); 
+	}
 
-    operator BasedPtr<T>() const { return get(); }
+    operator BasedPtr<T>() const {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_cast_count++;
+#endif   
+        return get(); 
+	}
 
-    bool operator!() const { return offset_ == 0; }
+    bool operator!() const {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_negate_count++;
+#endif   
+        return offset_ == 0; 
+	}
 
-    bool operator==(const RelPtr &other) const { return get() == other.get(); }
+    bool operator==(const RelPtr &other) const {
+#ifdef INSTRUMENT_POINTER_OP
+        internal::rp_equal_count++;
+#endif   
+        return get() == other.get(); 
+	}
 
     // TODO - implement math operators, like increment and decrement
 
@@ -209,6 +322,7 @@ class RelPtr {
             return reinterpret_cast<T *>(target);
         }
     }
+
 };
 
 }  // namespace ocxxr

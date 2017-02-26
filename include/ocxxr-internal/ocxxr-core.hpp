@@ -7,6 +7,12 @@
 
 namespace ocxxr {
 
+#ifdef INSTRUMENT_POINTER_OP
+namespace internal {
+    void outputAllCount();
+}
+#endif
+
 /// @brief Base class for all OCR objects which can carry data.
 /// @see DatablockHandle, Event
 template <typename T>
@@ -63,7 +69,15 @@ static_assert(internal::IsLegalHandle<NullHandle>::value,
               "NullHandle must be castable to/from ocrGuid_t.");
 
 /// Shut down OCR.
-inline void Shutdown() { ocrShutdown(); }
+inline void Shutdown() { 
+
+#ifdef INSTRUMENT_POINTER_OP
+    internal::outputAllCount();
+#endif
+
+    ocrShutdown(); 
+
+}
 
 /// Abort OCR execution with an error code.
 inline void Abort(u8 error_code) { ocrAbort(error_code); }
