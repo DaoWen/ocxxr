@@ -16,6 +16,7 @@ elif [ $1 = "time" ]; then
     fi
     touch $outputFile
 
+	echo "offset native" >> $outputFile
 #origin version
     printf "\n\n--------------------Offset Based Relptr--------------------"
     for dir in *; do
