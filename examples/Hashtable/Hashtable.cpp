@@ -430,11 +430,13 @@ void FinalTask(ocxxr::Arena<void> table, ocxxr::Datablock<char> result,
     table.Destroy();  // FIXME - should do deep destroy
     char res_str[] = {*result ? *result : 'X', '\0'};
     PRINTF("Result = %s\n", res_str);
+
 #ifdef MEASURE_TIME
 	high_resolution_clock::time_point end = high_resolution_clock::now();
 	duration<double> time_span = duration_cast<duration<double>>(end - start);
-	PRINTF("elased time: %fs\n", time_span.count());
+	PRINTF("elapsed time: %f second\n", time_span.count());
 #endif
+
 	ocxxr::Shutdown();
 }
 

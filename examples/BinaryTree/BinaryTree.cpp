@@ -8,6 +8,15 @@
 
 #include <cstdlib>
 
+#ifdef MEASURE_TIME
+#include <ctime>
+#include <ratio>
+#include <chrono>
+using namespace std::chrono;
+
+high_resolution_clock::time_point start;
+#endif
+
 constexpr bool kVerboseMessages = false;
 
 template <typename T>
@@ -93,7 +102,11 @@ class BinaryTree {
 };
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
-    u32 n;
+#ifdef MEASURE_TIME
+    start = high_resolution_clock::now();
+#endif
+    
+	u32 n;
     if (args->argc() != 2) {
         n = 100000;
         PRINTF("Usage: BinaryTree <num>, defaulting to %" PRIu32 "\n", n);
@@ -142,5 +155,10 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     //
 
     PRINTF("Result = %s\n", result);
+#ifdef MEASURE_TIME
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(end - start);
+	PRINTF("elapsed time: %f second\n", time_span.count());
+#endif
     ocxxr::Shutdown();
 }
