@@ -24,7 +24,7 @@ endif
 CFLAGS+= -I$(TEMPESTBASEDIR)/include
 CFLAGS+= -I$(TEMPESTBASEDIR)/test/ocr-dballoc/include -std=c++11
 CFLAGS+= -I$(OCXXR_LIB_ROOT)/include
-CFLAGS+= -I$(OCR_INSTALL_ROOT)/include
+CFLAGS+= -I$(XSTG_ROOT)/ocr/ocr/install/include
 
 # Tempest libraries that will be linked
 TEMPESTLIBS= \
