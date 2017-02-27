@@ -1,0 +1,5 @@
+.PHONY: default
+run:
+	make -C test/hpc -f Makefile.x86 $@
+clean:
+	make -C test/hpc -f Makefile.x86 $@
