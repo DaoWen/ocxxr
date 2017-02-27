@@ -455,6 +455,18 @@ void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
     }
 }
 
+struct CreateTaskParam {
+    u64 start;
+	u64 end;
+	ocxxr::Event<void> sync;
+};
+
+void CreateBlockTask(CreateTaskParam param, ocxxr::Arena<Hashtable<u64, char>> table) {
+    for (u64 i = param.start; i < param.end; i++) {
+	    table->Put(i, static_cast<char>('a' + i), param.sync);
+	}
+}
+
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 #ifdef MEASURE_TIME
     start = high_resolution_clock::now();
@@ -470,7 +482,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 
     auto table = Hashtable<u64, char>::Create();
 
-   	constexpr u64 kPutCount = 10000;
+   	u64 kPutCount = n;
     auto puts_latch = ocxxr::LatchEvent<void>::Create(kPutCount);
 
     auto getter_template = OCXXR_TEMPLATE_FOR(GetterTask);
@@ -480,9 +492,17 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     if (kHashtableVerbose) {
         PRINTF("Starting puts\n");
     }
-    for (u64 i = 0; i < kPutCount; i++) {
-        table->Put(i, static_cast<char>('a' + i), puts_latch);
-    }
+    u64 blockSize = 5000;
+	auto create_task_template = OCXXR_TEMPLATE_FOR(CreateBlockTask);
+	for (u64 i = 0; i < kPutCount / blockSize; i++) {
+		CreateTaskParam param = {i * blockSize, (i + 1) * blockSize, puts_latch};
+		create_task_template().CreateTask(param, table);	
+	}
+	create_task_template.Destroy();
+
+//    for (u64 i = 0; i < kPutCount; i++) {
+//        table->Put(i, static_cast<char>('a' + i), puts_latch);
+//    }
     if (kHashtableVerbose) {
         PRINTF("Done with puts\n");
     }
