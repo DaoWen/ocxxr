@@ -80,11 +80,18 @@ typedef struct
     Ocr::RelPtr <GridCartesianGLL> g;
 } MG;
 
+// XXX - running extra iterations makes the test fail, obviously
+#define LOOP_ITERS 100
+
 ocrGuid_t updatePatch(u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
     int i, rank, len, dlen, step, maxStep, nRanks;
 
+    // TODO - use BasedPtrs
     double * localDataGeometric = (double *) depv[0].ptr;
     updateStateInfo_t * stateInfo = (updateStateInfo_t *) depv[1].ptr;
+
+    // BEGIN LOOP
+    for (int iter=0; iter<LOOP_ITERS; iter++) {
 
     rank = stateInfo->rank;
     len = stateInfo->lenGeometric;
@@ -103,7 +110,7 @@ ocrGuid_t updatePatch(u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
     double *newData;
     newData = (double *) localDataGeometric;
 
-
+    // TODO - use BasedPtr
     void * localArena =  depv[2].ptr;
     ocrAllocatorSetDb(localArena, (size_t) ARENA_SIZE, false);
     Grid * pGrid =  ((MG *) localArena)->g;
@@ -144,7 +151,9 @@ ocrGuid_t updatePatch(u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
     DBG_PRINTF("NV: [%d] offset' = %ld\n", rank, alloc_state2.offset);
 
     // restore pre-patch allocator state
-    //ocrAllocatorGet().restoreState(alloc_state);
+    ocrAllocatorGet().restoreState(alloc_state);
+
+    } // END LOOP
 
     // create clone for next timestep or trigger output
     if (step < maxStep) {
