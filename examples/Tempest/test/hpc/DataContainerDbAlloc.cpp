@@ -216,7 +216,7 @@ ocrGuid_t outputEdt (u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
 	duration<double> time_span = duration_cast<duration<double>>(end - start);
 	PRINTF("elapsed time: %f second\n", time_span.count());
 #endif
-    ocrShutdown ();
+    ocxxr::Shutdown ();
     return NULL_GUID;
 }
 

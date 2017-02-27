@@ -101,7 +101,7 @@ class BinaryTree {
     };
 };
 
-u64 hash(u64 x) {
+u64 myhash(u64 x) {
     return x * 11400714819323198549UL;
 }
 
@@ -131,7 +131,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     }
 
     for (u64 i = 0; i < kPutCount; i++) {
-        tree->Put(hash(i), static_cast<char>('a' + i));
+        tree->Put(myhash(i), static_cast<char>('a' + i));
     }
 
     if (kVerboseMessages) {
@@ -147,7 +147,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     }
 
     char result[] = {'X', '\0'};
-    tree->Get(hash(6), result[0]);
+    tree->Get(myhash(6), result[0]);
 
     if (kVerboseMessages) {
         PRINTF("Done with gets\n");

@@ -71,9 +71,10 @@ elif [ $1 = "op-count" ]; then
             echo \# $dir>> $outputFile
             pushd $dir > /dev/null
             index=0
+			make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
-                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DINSTRUMENT_POINTER_OP=1 -DNDEBUG=1" make -f Makefile.x86 clean run | awk '/rp|bp/'>> $outputFile
+                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DINSTRUMENT_POINTER_OP=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/^rp|^bp/'>> $outputFile
                 index=$((index+1))
             done
             popd > /dev/null
