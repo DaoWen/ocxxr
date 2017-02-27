@@ -28,9 +28,10 @@ elif [ $1 = "time" ]; then
             echo \# $dir offset >> $outputFile
             pushd $dir > /dev/null
             index=0
+			make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
-                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 clean run | awk '/elapsed time:/ { print $3 }' >> $outputFile
+                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/elapsed time:/ { print $3 }' >> $outputFile
                 index=$((index+1))
             done
             popd > /dev/null
@@ -45,9 +46,10 @@ elif [ $1 = "time" ]; then
             echo \# $dir native >> $outputFile
             pushd $dir > /dev/null
             index=0
+			make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
-                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DOCXXR_USE_NATIVE_POINTERS=1 -DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 clean run | awk '/elapsed time:/ { print $3 }' >> $outputFile
+                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DOCXXR_USE_NATIVE_POINTERS=1 -DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/elapsed time:/ { print $3 }' >> $outputFile
                 index=$((index+1))
             done
             popd > /dev/null

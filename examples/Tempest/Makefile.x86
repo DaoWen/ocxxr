@@ -1,5 +1,9 @@
 .PHONY: default
-run:
+run: lib
 	make -C test/hpc -f Makefile.x86 $@
 clean:
 	make -C test/hpc -f Makefile.x86 $@
+	make clean
+.PHONY: lib
+lib:
+	make

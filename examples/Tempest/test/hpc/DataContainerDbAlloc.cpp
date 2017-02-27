@@ -36,6 +36,15 @@
 #define DBG_PRINTF(...) DBG_ONLY(PRINTF(__VA_ARGS__))
 #endif
 
+#ifdef MEASURE_TIME
+#include <ctime>
+#include <ratio>
+#include <chrono>
+using namespace std::chrono;
+
+high_resolution_clock::time_point start;
+#endif
+
 using namespace Ocr::SimpleDbAllocator;
 
 std::map<u64, int> guidHandle;
@@ -193,6 +202,11 @@ ocrGuid_t outputEdt (u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
     DBG_PRINTF ("Good-by from outputEdt!\n");
     DBG_PRINTF ("***********************\n");
     fflush (stdout);
+#ifdef MEASURE_TIME
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(end - start);
+	PRINTF("elapsed time: %f second\n", time_span.count());
+#endif
     ocrShutdown ();
     return NULL_GUID;
 }
@@ -200,6 +214,10 @@ ocrGuid_t outputEdt (u32 paramc, u64* paramv, u32 depc, ocrEdtDep_t depv[]) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
+#ifdef MEASURE_TIME
+    start = high_resolution_clock::now();
+#endif
+
     DBG_PRINTF("Hello from DataContainerTest-OCR!\n");
     u32 argc=args->argc();
     DBG_PRINTF("argc = %d.\n", argc);
