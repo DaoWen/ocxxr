@@ -177,10 +177,7 @@ class ArenaHandle : public DatablockHandle<ArenaState<T>> {
     explicit ArenaHandle(ArenaState<T> **data_ptr, u64 bytes,
                          const DatablockHint *hint)
             : DatablockHandle<ArenaState<T>>(
-                      data_ptr, bytes + sizeof(ArenaState<T>), hint) {
-        assert(bytes >= sizeof(internal::SizeOf<T>) &&
-               "Arena must be big enough to hold root object");
-    }
+                      data_ptr, bytes + sizeof(ArenaState<T>), hint) {}
 
     explicit ArenaHandle(ocrGuid_t guid = NULL_GUID)
             : DatablockHandle<ArenaState<T>>(guid) {}
