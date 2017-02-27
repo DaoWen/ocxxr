@@ -20,6 +20,14 @@ ifndef TEMPESTBASEDIR
   $(error TEMPESTBASEDIR undefined)
 endif
 
+ifndef OCXXR_LIB_ROOT
+  $(error OCXXR_LIB_ROOT undefined)
+endif
+
+ifndef XSTG_ROOT
+  $(error XSTG_ROOT undefined)
+endif
+
 # Add the base include directory to the file path
 CFLAGS+= -I$(TEMPESTBASEDIR)/include
 CFLAGS+= -I$(TEMPESTBASEDIR)/test/ocr-dballoc/include -std=c++11
