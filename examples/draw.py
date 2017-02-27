@@ -3,7 +3,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import brewer2mpl
+import palettable
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
@@ -47,7 +47,8 @@ filename = os.path.splitext(os.path.basename(__file__))[0]
 
 ind = np.arange(len(benchmarks))
 W = 0.25
-colors = brewer2mpl.get_map('Set2', 'qualitative', 8).mpl_colors
+colors = palettable.tableau.Gray_5.mpl_colors
+
 
 rects = []
 
