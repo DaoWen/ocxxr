@@ -9,7 +9,7 @@ outputFile=$(pwd)/result.dat
 [ -z $OCR_INSTALL_ROOT ] && export OCR_INSTALL_ROOT=$XSTG_ROOT/ocr/ocr/install
 
 # Which benchmarks to run?
-BENCHMARKS="BinaryTree Hashtable Tempest"
+BENCHMARKS="BinaryTree Hashtable Tempest Lulesh"
 
 if [ -z $1 ]; then
     echo "Please specify experiment name: [time|op-count]"
