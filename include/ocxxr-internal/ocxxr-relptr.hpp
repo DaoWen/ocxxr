@@ -39,6 +39,15 @@ namespace internal {
 	}
 #endif
 
+#ifdef SANITY_CHECK
+    void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
+		ptrdiff_t end_ptr = base_ptr + db_size;
+		if (start_ptr < base_ptr || start_ptr >= end_ptr) {
+			abort();
+		}
+	}
+#endif
+
 template <typename T, bool embedded>
 class BasedPtrImpl {
  public:
@@ -163,12 +172,29 @@ class BasedPtrImpl {
         } else {
             target_guid_ = other.target_guid_;
             offset_ = other.offset_;
+#ifdef SANITY_CHECK
+            u64 db_size;
+            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+            ptrdiff_t target = internal::CombineBaseOffset(base, offset_);
+            ocrDbGetSize(target_guid_, &db_size);
+            sanityCheck(base, db_size, target);
+#endif
         }
     }
 
     void set(const T *other) {
         internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_,
                                        embedded);
+
+#ifdef SANITY_CHECK
+        if (other) {
+            u64 db_size;
+            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+            ocrDbGetSize(target_guid_, &db_size);
+            ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
+            sanityCheck(base, db_size, ptr);
+		}
+#endif
     }
 
     T *get() const {
@@ -178,6 +204,12 @@ class BasedPtrImpl {
         } else if (embedded && ocrGuidIsUninitialized(target_guid_)) {
             // optimized case: treat as intra-datablock RelPtr
             ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
+#ifdef SANITY_CHECK
+            u64 db_size;
+            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+            ocrDbGetSize(target_guid_, &db_size);
+            sanityCheck(base, db_size, target);
+#endif
             return reinterpret_cast<T *>(target);
         } else {
 // normal case: inter-datablock pointer
@@ -187,6 +219,12 @@ class BasedPtrImpl {
             ptrdiff_t base = internal::AddressForGuid(target_guid_);
 #endif  // OCXXR_USE_NATIVE_POINTERS
             ptrdiff_t target = internal::CombineBaseOffset(base, offset_);
+
+#ifdef SANITY_CHECK
+            u64 db_size;
+            ocrDbGetSize(target_guid_, &db_size);
+            sanityCheck(base, db_size, target);
+#endif
             return reinterpret_cast<T *>(target);
         }
     }
@@ -227,7 +265,7 @@ class RelPtr {
 
     RelPtr(const RelPtr &other) { set(other); }
 
-    RelPtr(const T *other) { set(other); }
+    explicit RelPtr(const T *other) { set(other); }
 
     // TODO - ensure that default assignment operator still works correctly
     RelPtr<T> &operator=(const RelPtr &other) {
@@ -310,6 +348,13 @@ class RelPtr {
         } else {
             ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
             offset_ = internal::CombineBaseOffset(-base_ptr(), ptr);
+#ifdef SANITY_CHECK
+		    ocrGuid_t guid_out;
+		    ptrdiff_t offset_out;
+	        internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
+                                       false);
+#endif
+
         }
     }
 
@@ -319,6 +364,12 @@ class RelPtr {
             return nullptr;
         } else {
             ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
+#ifdef SANITY_CHECK
+		    ocrGuid_t guid_out;
+		    ptrdiff_t offset_out;
+	        internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
+                                       false);
+#endif
             return reinterpret_cast<T *>(target);
         }
     }

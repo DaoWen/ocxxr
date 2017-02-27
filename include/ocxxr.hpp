@@ -15,6 +15,7 @@ extern "C" {
 }
 
 #include <cassert>
+#include <cstdlib>
 #include <functional>
 #include <type_traits>
 #include <utility>

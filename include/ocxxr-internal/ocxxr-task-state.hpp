@@ -199,9 +199,16 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
                                   DbPair::CompareBases);
         assert(j != a_start);
         auto i = j - 1;
-        ptrdiff_t end_addr = (j == a_end)
-                                     ? std::numeric_limits<ptrdiff_t>::max()
-                                     : j->base_addr();
+        ptrdiff_t db_size = 0;
+        ocrDbGetSize(i->guid(), reinterpret_cast<u64*>(&db_size));
+        ptrdiff_t end_addr = i->base_addr() + db_size;
+		if (!(dst_addr <= end_addr)) {
+		    PRINTF("db size is %lu, src is %p, dst is %lx, target is %p, base is %lx, end is %lx\n", db_size, source, dst_addr, target, i->base_addr(), end_addr);
+		}
+		assert(i != a_end);
+		assert(i->base_addr() <= dst_addr);
+        assert(dst_addr <= end_addr);
+
         assert(i != a_end && i->base_addr() <= dst_addr &&
                dst_addr <= end_addr &&
                "Based pointer must point into an acquired datablock");
