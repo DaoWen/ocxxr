@@ -62,6 +62,8 @@ RUN_JENKINS ?= no
 ENABLE_VISUALIZER ?= no
 ## END of variables coming from user/environment
 
+RUN_MODE := buildApp
+
 include ${APPS_ROOT}/makefiles/make-pre.inc
 
 # Name of the application to build
