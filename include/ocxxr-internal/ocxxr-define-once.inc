@@ -17,10 +17,11 @@ namespace internal {
 
 OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 #ifdef INSTRUMENT_POINTER_OP
-    atomic<u64> rp_indirect_count(0), rp_arrow_count(0), rp_subscript_count(0), rp_cast_count(0), rp_equal_count(0), rp_assign_count(0), rp_negate_count(0);
-	atomic<u64> bp_indirect_count(0), bp_arrow_count(0), bp_subscript_count(0), bp_cast_count(0), bp_equal_count(0), bp_assign_count(0), bp_negate_count(0);
+    std::atomic<u64> rp_indirect_count(0), rp_arrow_count(0), rp_subscript_count(0), rp_cast_count(0), rp_equal_count(0), rp_assign_count(0), rp_negate_count(0);
+	std::atomic<u64> bp_indirect_count(0), bp_arrow_count(0), bp_subscript_count(0), bp_cast_count(0), bp_equal_count(0), bp_assign_count(0), bp_negate_count(0);
     void outputAllCount() {
-	    cout << "bp_equal_count " << bp_equal_count.load() << endl;
+	    using namespace std;
+		cout << "bp_equal_count " << bp_equal_count.load() << endl;
 		cout << "bp_indirect_count " << bp_indirect_count.load() << endl;
 		cout << "bp_arrow_count " << bp_arrow_count.load() << endl;
 		cout << "bp_subscript_count " << bp_subscript_count.load() << endl;

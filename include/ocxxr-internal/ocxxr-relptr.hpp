@@ -4,7 +4,6 @@
 #ifdef INSTRUMENT_POINTER_OP
 #include <atomic>
 #include <iostream>
-using namespace::std;
 #endif
 
 namespace ocxxr {
@@ -17,8 +16,8 @@ class RelPtr;
 
 namespace internal {
 #ifdef INSTRUMENT_POINTER_OP
-extern atomic<u64> rp_indirect_count, rp_arrow_count, rp_subscript_count, rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count;
-extern atomic<u64> bp_indirect_count, bp_arrow_count, bp_subscript_count, bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count;
+extern std::atomic<u64> rp_indirect_count, rp_arrow_count, rp_subscript_count, rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count;
+extern std::atomic<u64> bp_indirect_count, bp_arrow_count, bp_subscript_count, bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count;
 void outputAllCount();
 #endif
 
