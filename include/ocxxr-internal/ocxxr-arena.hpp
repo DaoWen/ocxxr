@@ -9,43 +9,47 @@
 
 namespace ocxxr {
 
-namespace internal {
-
-namespace dballoc {
-
 struct AllocatorState {
     ptrdiff_t offset;
 };
 
+namespace internal {
+
+namespace dballoc {
+
 struct DbArenaHeader {
     s64 size;
     ptrdiff_t offset;
+
+    AllocatorState SaveState(void) { return {offset}; }
+
+    void RestoreState(AllocatorState state) { offset = state.offset; }
 };
 
 class DatablockAllocator {
  private:
-    char *const m_dbBuf;
-    DbArenaHeader *const m_info;
+    char *const buffer_;
+    DbArenaHeader *state_;
 
  public:
-    constexpr DatablockAllocator(void) : m_dbBuf(nullptr), m_info(nullptr) {}
+    constexpr DatablockAllocator(void) : buffer_(nullptr), state_(nullptr) {}
 
     DatablockAllocator(void *dbPtr)
-            : m_dbBuf(reinterpret_cast<char *>(dbPtr)),
-              m_info(reinterpret_cast<DbArenaHeader *>(dbPtr)) {}
+            : buffer_(reinterpret_cast<char *>(dbPtr)),
+              state_(reinterpret_cast<DbArenaHeader *>(dbPtr)) {}
 
-    AllocatorState saveState(void) { return {m_info->offset}; }
+    AllocatorState SaveState(void) { return state_->SaveState(); }
 
-    void restoreState(AllocatorState state) { m_info->offset = state.offset; }
+    void RestoreState(AllocatorState state) { state_->RestoreState(state); }
 
     inline void *allocateAligned(size_t size, int alignment) const {
-        assert(m_info != nullptr && "Uninitialized allocator");
-        const ptrdiff_t offset = m_info->offset;
+        assert(state_ != nullptr && "Uninitialized allocator");
+        const ptrdiff_t offset = state_->offset;
         ptrdiff_t start = (offset + alignment - 1) & (-alignment);
-        m_info->offset = start + size;
-        assert(m_info->offset <= m_info->size &&
+        state_->offset = start + size;
+        assert(state_->offset <= state_->size &&
                "Datablock allocator overflow");
-        return &m_dbBuf[start];
+        return &buffer_[start];
     }
 
     // FIXME - I don't know if these alignment checks are sufficient,
@@ -86,9 +90,6 @@ inline void AllocatorDbInit(void *dbPtr, size_t dbSize) {
 
 }  // namespace dballoc
 }  // namespace internal
-
-// ArenaState management
-using AllocatorState = internal::dballoc::DatablockAllocator;
 
 template <typename T>
 struct ArenaState {
@@ -282,6 +283,11 @@ class Arena : public AcquiredData {
     /// Destroy this Arena.
     void Destroy() const { handle_.Destroy(); }
 
+
+    AllocatorState SaveState(void) { return state_->header.SaveState(); }
+
+    void RestoreState(AllocatorState state) { state_->header.RestoreState(state); }
+
     template <typename U>
     friend void SetImplicitArena(Arena<U> arena);
 
@@ -291,8 +297,8 @@ class Arena : public AcquiredData {
         internal::dballoc::AllocatorDbInit(state_, bytes);
     }
 
-    const ArenaHandle<T> handle_;
-    ArenaState<T> *const state_;
+    ArenaHandle<T> handle_;
+    ArenaState<T> *state_;
 };
 
 template <typename T>
@@ -308,6 +314,10 @@ struct Unpack<Arena<T>> {
 };
 
 }  // namespace internal
+
+template <typename T>
+using ArenaList = DatablockList<T, Arena>;
+
 }  // namespace ocxxr
 
 #endif  // OCXXR_ARENA_HPP_

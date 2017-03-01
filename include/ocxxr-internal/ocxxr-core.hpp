@@ -9,7 +9,7 @@ namespace ocxxr {
 
 #ifdef INSTRUMENT_POINTER_OP
 namespace internal {
-    void outputAllCount();
+void outputAllCount();
 }
 #endif
 
@@ -69,14 +69,12 @@ static_assert(internal::IsLegalHandle<NullHandle>::value,
               "NullHandle must be castable to/from ocrGuid_t.");
 
 /// Shut down OCR.
-inline void Shutdown() { 
-
+inline void Shutdown() {
 #ifdef INSTRUMENT_POINTER_OP
     internal::outputAllCount();
 #endif
 
-    ocrShutdown(); 
-
+    ocrShutdown();
 }
 
 /// Abort OCR execution with an error code.
@@ -222,20 +220,20 @@ class Datablock : public AcquiredData {
     T *data_;
 };
 
-template <typename T>
+template <typename T, template <typename> class U = DatablockHandle>
 class DataHandleList {
     // FIXME - implement!
 };
 
-template <typename T>
+template <typename T, template <typename> class U = Datablock>
 class DatablockList : public AcquiredData {
  public:
+    typedef U<T> DB;
     // FIXME - define move assignment function.
     DatablockList(size_t size)
             : capacity_(size),
               count_(0),
-              data_(size ? OCXXR_TEMP_ARRAY_NEW(Datablock<T>, size) : nullptr) {
-    }
+              data_(size ? OCXXR_TEMP_ARRAY_NEW(U<T>, size) : nullptr) {}
 
     DatablockList(DatablockList &&other)
             : capacity_(other.capacity_),
@@ -246,16 +244,16 @@ class DatablockList : public AcquiredData {
 
     ~DatablockList() { OCXXR_TEMP_ARRAY_DELETE(data_); }
 
-    Datablock<T> *begin() const { return data_; }
+    DB *begin() const { return data_; }
 
-    Datablock<T> *end() const { return data_ + count_; }
+    DB *end() const { return data_ + count_; }
 
-    Datablock<T> &operator[](size_t index) const {
+    DB &operator[](size_t index) const {
         assert(index < capacity_);
         return data_[index];
     }
 
-    DatablockList &Add(Datablock<T> datablock) {
+    DatablockList &Add(DB datablock) {
         assert(count_ < capacity_ && "DatablockList overflow!");
         *end() = datablock;
         ++count_;
@@ -269,7 +267,7 @@ class DatablockList : public AcquiredData {
  private:
     size_t capacity_;
     size_t count_;
-    Datablock<T> *data_;
+    DB *data_;
 };
 
 struct Properties {
@@ -498,13 +496,16 @@ static_assert(
 template <bool kHasParam, typename AllArgs, typename... ArgsAcc>
 struct VarArgsInfoHelp;
 
-template <bool kHasParam, typename T, typename... ArgsAcc>
-struct VarArgsInfoHelp<kHasParam, void(DatablockList<T>), ArgsAcc...> {
+template <bool kHasParam, typename T, template <typename> class U,
+          typename... ArgsAcc>
+struct VarArgsInfoHelp<kHasParam, void(DatablockList<T, U>), ArgsAcc...> {
     static constexpr bool kHasVarArgs = true;
     typedef void(DepsFn)(ArgsAcc...);
-    typedef void(VarArgsFn)(DatablockList<T>);
-    typedef void(VarArgsHandleFn)(DataHandleList<T>);
+    typedef void(VarArgsFn)(DatablockList<T, U>);
+    typedef void(VarArgsHandleFn)(DataHandleList<T, U>);
     typedef T VarArgsType;
+    typedef U<T> VarArgsClass;
+    typedef DatablockList<T, U> VarArgsListType;
     static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
@@ -515,6 +516,8 @@ struct VarArgsInfoHelp<kHasParam, void(), ArgsAcc...> {
     typedef void(VarArgsFn)();
     typedef void(VarArgsHandleFn)();
     typedef void VarArgsType;
+    typedef void VarArgsClass;
+    typedef void VarArgsListType;
     static constexpr size_t kDepCount = sizeof...(ArgsAcc);
 };
 
@@ -531,6 +534,8 @@ struct VarArgsInfoHelp<kHasParam, void(A, AllArgs...), ArgsAcc...> {
     typedef typename Recur::VarArgsFn VarArgsFn;
     typedef typename Recur::VarArgsHandleFn VarArgsHandleFn;
     typedef typename Recur::VarArgsType VarArgsType;
+    typedef typename Recur::VarArgsClass VarArgsClass;
+    typedef typename Recur::VarArgsListType VarArgsListType;
     static constexpr size_t kDepCount = Recur::kDepCount;
 };
 
@@ -683,12 +688,13 @@ class TaskImplementation<F, user_fn, void(Params...), void(Args...),
                 .guid();
     }
 
-    template <typename T = typename internal::FnInfo<F>::VarArgsType>
-    static DatablockList<T> UnpackVarArgs(u32 depc, ocrEdtDep_t depv[],
-                                          size_t) {
-        DatablockList<T> var_args(depc);
+    template <typename T = typename internal::FnInfo<F>::VarArgsType,
+              typename U = typename internal::FnInfo<F>::VarArgsClass,
+              typename L = typename internal::FnInfo<F>::VarArgsListType>
+    static L UnpackVarArgs(u32 depc, ocrEdtDep_t depv[], size_t) {
+        L var_args(depc);
         for (u32 i = kDepc; i < depc; i++) {
-            var_args.Add(Datablock<T>(depv[i]));
+            var_args.Add(U(depv[i]));
         }
         return std::move(var_args);
     }
@@ -824,8 +830,8 @@ class Task<Ret(Args...)> : public ObjectHandle {
             u32 index, T src,
             ocrDbAccessMode_t mode = AccessMode::kDefault) const {
         namespace i = internal;
-        typedef typename i::FnInfo<F>::VarArgsType U;
-        typedef DataHandle<U> Expected;
+        typedef typename i::FnInfo<F>::VarArgsClass U;
+        typedef DataHandleOf<U> Expected;
         typedef DataHandleOf<T> Actual;
         const u32 slot = kDepc + index;
         static_assert(i::FnInfo<F>::kHasVarArgs,
