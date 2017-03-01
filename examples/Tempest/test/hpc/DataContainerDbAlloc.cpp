@@ -58,9 +58,9 @@ struct MG {
 
 struct updateStateInfo_t;
 
-void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
-                 ocxxr::Datablock<updateStateInfo_t> stateInfo,
-                 ocxxr::Arena<MG> arena);
+void UpdatePatch(ocxxr::Datablock<updateStateInfo_t> stateInfo,
+                 ocxxr::Arena<void> geometricArena,
+                 ocxxr::Arena<void> localArena);
 
 struct updateStateInfo_t {
     u64 rank;
@@ -71,6 +71,8 @@ struct updateStateInfo_t {
     u64 thisStep;
     u64 nSteps;
     u64 nRanks;
+    ocxxr::BasedPtr<Grid> grid;
+    ocxxr::BasedPtr<double> geometric;
     // ocrEdt_t FNC;    // function ptr
     ocxxr::TaskTemplate<decltype(UpdatePatch)> TML;  // template
     // ocrGuid_t EDT;   // edt guid
@@ -80,13 +82,12 @@ struct updateStateInfo_t {
 // XXX - running extra iterations makes the test fail, obviously
 #define LOOP_ITERS 1
 
-void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
-                 ocxxr::Datablock<updateStateInfo_t> stateInfo,
-                 ocxxr::Arena<MG> localArena) {
+void UpdatePatch(ocxxr::Datablock<updateStateInfo_t> stateInfo,
+                 ocxxr::Arena<void> geometricArena,
+                 ocxxr::Arena<void> localArena) {
     int i, rank, len, dlen, step, maxStep, nRanks;
 
-    // TODO - use BasedPtrs
-    //updateStateInfo_t *stateInfo = (updateStateInfo_t *)depv[1].ptr;
+    // updateStateInfo_t *stateInfo = (updateStateInfo_t *)depv[1].ptr;
 
     // BEGIN LOOP
     for (int iter = 0; iter < LOOP_ITERS; iter++) {
@@ -106,22 +107,21 @@ void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
         }
         DBG_PRINTF("Rank %d in updatePatch will update %d bytes! (%d)\n", rank,
                    len, dlen);
-        double *newData = localDataGeometric.data_ptr();
+        double *newData = stateInfo->geometric;
 
-        // TODO - use BasedPtr
         ocxxr::SetImplicitArena(localArena);
-        Grid *pGrid = localArena->g;
+        Grid *grid = stateInfo->grid;
         DBG_PRINTF("GJDEBUG: rank= %d grid pointer in updatePatch %lx\n", rank,
-                   pGrid);
+                   grid);
 
         // save pre-patch allocator state
         auto alloc_state = localArena.SaveState();
         DBG_PRINTF("NV: [%d] offset  = %ld\n", rank, alloc_state.offset);
 
         // activate the patch
-        GridPatch *pPatch = pGrid->ActivateEmptyPatch(rank);
+        GridPatch *pPatch = grid->ActivateEmptyPatch(rank);
         DBG_PRINTF("GJDEBUG: rank= %d active patches %d\n", rank,
-                   pGrid->GetActivePatchCount());
+                   grid->GetActivePatchCount());
 
         // Get DataContainers associated with GridPatch
 
@@ -140,7 +140,7 @@ void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
         //
         // deactivate the GridPatch
         DBG_PRINTF("Rank %d deactivates its patch in step %d \n", rank, step);
-        pGrid->DeactivatePatch(rank);
+        grid->DeactivatePatch(rank);
         // TODO:create neighbor events; use the guids from list created in main
 
         // DEBUG print current allocator state
@@ -155,12 +155,12 @@ void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
     // create clone for next timestep or trigger output
     if (step < maxStep) {
         stateInfo->thisStep++;
-        localDataGeometric.Release();
+        geometricArena.Release();
         localArena.Release();
         // change to local guid for EDT
         auto update_template = stateInfo->TML;
-            auto update_task = update_template().CreateTask(
-                    localDataGeometric, stateInfo, localArena);
+        auto update_task = update_template().CreateTask(
+                stateInfo, geometricArena, localArena);
         // release data blocks
 
         //    This data is currently not being used
@@ -172,7 +172,7 @@ void UpdatePatch(ocxxr::Arena<double> localDataGeometric,
     } else {
         // TODO:  Release the data block which has been updated and is printed
         // by outputEDT; important for x86-mpi;
-        localDataGeometric.Release();
+        geometricArena.Release();
         localArena.Release();
         stateInfo->DONE.Satisfy();
         DBG_PRINTF("Good-by from Rank %d in updatePatch\n", rank);
@@ -467,12 +467,13 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
             state_info->thisStep = 0;
             state_info->nSteps = (u64)nSteps;
             state_info->nRanks = (u64)nWorkers;
+            state_info->geometric = geometric.data_ptr(),
+            state_info->grid = (Grid *)arena[i]->g;
             state_info->TML = update_template;
             state_info->DONE = sync_event;
 
             auto update_task = update_template().CreateTask(
-                    geometric, state_info, arena[i]);
-
+                    state_info, geometric.Untyped(), arena[i].Untyped());
             out_task.DependOnWithinList(i, geometric);
         }
 
