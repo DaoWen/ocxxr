@@ -1,9 +1,15 @@
 .PHONY: default
+
+CFLAGS += -DUSE_OCR=1 -DUSE_OCR_TEST=1
+export CFLAGS
+
 run: lib
 	make -C test/hpc -f Makefile.x86 $@
+
 clean:
 	make -C test/hpc -f Makefile.x86 $@
 	make clean
+
 .PHONY: lib
 lib:
 	make

@@ -114,7 +114,7 @@ public:
 
 			m_sSize = sSize;
 
-			m_data = Ocr::NewArray<T>(sSize);
+			m_data = ocxxr::NewArray<T>(sSize);
 		}
 
 		Zero();

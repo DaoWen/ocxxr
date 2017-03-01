@@ -1,13 +1,18 @@
 #ifndef _TEMPEST_REFACTOR_H
 #define _TEMPEST_REFACTOR_H
 
-#if defined(USE_OCR) || defined(USE_OCR_TEST)
+#define TEMPEST_USE_NATIVE_PTRS (OCXXR_USE_NATIVE_POINTERS || (!defined(USE_OCR_TEST) && !defined(USE_OCR)))
 
+#if !TEMPEST_USE_NATIVE_PTRS
+
+#include "ocxxr.hpp"
 #include "ocr_relative_ptr.hpp"
-#include "ocr_db_alloc.hpp"
+//#include "ocr_db_alloc.hpp"
 #include "ocr_vector.hpp"
 
 #else
+
+#pragma message "Using native vector in Tempest"
 
 #include <vector>
 
@@ -15,7 +20,7 @@
 
 namespace TR {
 
-#ifdef USE_OCR_TEST
+#if !TEMPEST_USE_NATIVE_PTRS
 
     template<typename T> using Ptr = Ocr::RelPtr<T>;
     template<typename T, size_t N=256> using Vector = Ocr::VectorN<T, N>;

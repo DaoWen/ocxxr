@@ -1,7 +1,7 @@
 #ifndef _OCR_VECTOR_HPP_
 #define _OCR_VECTOR_HPP_
 
-#include "ocr_db_alloc.hpp"
+//#include "ocr_db_alloc.hpp"
 #include "ocr_relative_ptr.hpp"
 #include <cstdlib>
 #include <cstdio>
@@ -25,7 +25,7 @@ namespace Ocr {
 
             Vector(const size_t initial_size, const size_t max_capacity):
                 capacity(max_capacity), head(0),
-                data(Ocr::NewArray<T>(max_capacity))
+                data(ocxxr::NewArray<T>(max_capacity))
             {
                 resize(initial_size);
             }
@@ -63,7 +63,7 @@ namespace Ocr {
             void resize(size_t size) {
                 reserve(size);
                 for (size_t i=head; i<size; i++) {
-                    Ocr::TypeInitializer<T>::init(data[i]);
+                    ocxxr::internal::dballoc::TypeInitializer<T>::init(data[i]);
                 }
                 head = size;
             }

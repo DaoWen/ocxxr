@@ -6,6 +6,7 @@
 #include <ocxxr.hpp>
 
 namespace Ocr {
+#if 0 // DISABLED
     /**
      * This is our "relative pointer" class.
      * You should be able to use it pretty much just like a normal pointer.
@@ -58,7 +59,6 @@ namespace Ocr {
             /* TODO - implement math operators, like increment and decrement */
     };
 
-#if 0 // DISABLED
     template <typename T> using RelPtr = OcrRelativePtr<T>;
 
     namespace Internal {
@@ -75,6 +75,7 @@ namespace Ocr {
 
     template <typename T, unsigned N> using NestedRelPtr = typename Internal::PointerNester<T,N>::type;
 #else
+    template <typename T> using OcrRelativePtr = ocxxr::RelPtr<T>;
     template <typename T> using RelPtr = ocxxr::RelPtr<T>;
     template <typename T, unsigned N> using NestedRelPtr = ocxxr::NestedRelPtr<T, N>;
 #endif // DISABLED
