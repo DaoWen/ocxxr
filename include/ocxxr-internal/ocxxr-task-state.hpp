@@ -144,14 +144,16 @@ inline void RemoveDatablock(ocrGuid_t guid) {
     bookkeeping::AcquiredDbInfo *db_info = &_task_local_state->acquired_dbs;
     auto g_start = db_info->dbs_by_guid_start();
     auto g_end = db_info->dbs_by_guid_end();
+    // Remove from by-guid list
     auto i = std::lower_bound(g_start, g_end, DbPair(guid),
                               DbPair::CompareGuids);
     assert(ocrGuidIsEq(guid, i->guid()) &&
            "Released untracked non-null datablock");
     ptrdiff_t base_addr = i->base_addr();
     std::swap(i, --g_end);
-    --db_info->acquired_db_count;
+    // XXX - should sort on-demand...
     std::sort(g_start, g_end, DbPair::CompareGuids);
+    // Remove from by-address list
     auto a_start = db_info->dbs_by_addr_start();
     auto a_end = db_info->dbs_by_addr_end();
     auto j = std::lower_bound(a_start, a_end, DbPair(base_addr),
@@ -159,7 +161,9 @@ inline void RemoveDatablock(ocrGuid_t guid) {
     assert(base_addr == j->base_addr() &&
            "Matching base address for datablock GUID not found");
     std::swap(j, --a_end);
+    // XXX - should sort on-demand...
     std::sort(a_start, a_end, DbPair::CompareBases);
+    --db_info->acquired_db_count;
 }
 
 }  // namespace bookkeeping
