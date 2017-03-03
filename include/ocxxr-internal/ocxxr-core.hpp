@@ -975,7 +975,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     template <bool kEnable = !kHasVarArgs, internal::EnableIf<kEnable> = 0>
     Task<F> CreateFullTask(Event<R> *out_event, Params... params,
                            DataHandleOf<Args>... deps) {
-        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((flags_ != EDT_PROP_FINISH || out_event) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
@@ -995,7 +995,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
     Task<F> CreateFullTask(Event<R> *out_event, Params... params,
                            DataHandleOf<Args>... deps,
                            const DatablockList<T> &var_args) {
-        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((flags_ != EDT_PROP_FINISH || out_event) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
@@ -1026,7 +1026,7 @@ class TaskBuilder<F, void(Params...), void(Args...), void(VarArgs...)> {
 
     Task<F> CreateNullTask(Event<R> *out_event, Params... params,
                            u32 var_args_count) {
-        assert((!out_event || flags_ != EDT_PROP_FINISH) &&
+        assert((flags_ != EDT_PROP_FINISH || out_event) &&
                "Created Finish-type EDT, but not using the output event.");
         // Set params (if any)
         u64 *param_ptr[1 + Task<F>::kParamc] = {
