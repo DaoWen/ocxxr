@@ -16,17 +16,19 @@ class RelPtr;
 
 namespace internal {
 #ifdef INSTRUMENT_POINTER_OP
-extern std::atomic<u64> rp_indirect_count, rp_arrow_count, rp_subscript_count, rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count;
-extern std::atomic<u64> bp_indirect_count, bp_arrow_count, bp_subscript_count, bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count;
+extern std::atomic<u64> rp_indirect_count, rp_arrow_count, rp_subscript_count,
+        rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count;
+extern std::atomic<u64> bp_indirect_count, bp_arrow_count, bp_subscript_count,
+        bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count;
 void outputAllCount();
 #endif
 
 #ifdef SANITY_CHECK
 void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
-	ptrdiff_t end_ptr = base_ptr + db_size;
-	if (start_ptr < base_ptr || start_ptr >= end_ptr) {
-		abort();
-	}
+    ptrdiff_t end_ptr = base_ptr + db_size;
+    if (start_ptr < base_ptr || start_ptr >= end_ptr) {
+        abort();
+    }
 }
 #endif
 
@@ -38,8 +40,11 @@ class BasedPtrImpl {
     BasedPtrImpl(ocrGuid_t target, ptrdiff_t offset)
             : target_guid_(target), offset_(offset) {}
 
-    template <typename U = T, EnableIf<embedded && std::is_same<T, U>::value> = 0>
-    BasedPtrImpl(const BasedPtrImpl &other) { set(other); }
+    template <typename U = T,
+              EnableIf<embedded && std::is_same<T, U>::value> = 0>
+    BasedPtrImpl(const BasedPtrImpl &other) {
+        set(other);
+    }
 
     // Should be auto-generated if above version is disabled
     // BasedPtrImpl(const BasedPtrImpl &) = default;
@@ -56,7 +61,8 @@ class BasedPtrImpl {
         return *this;
     }
 
-    template <typename U = T, EnableIf<embedded && std::is_same<T, U>::value> = 0>
+    template <typename U = T,
+              EnableIf<embedded && std::is_same<T, U>::value> = 0>
     BasedPtrImpl &operator=(const BasedPtrImpl &other) {
 #ifdef INSTRUMENT_POINTER_OP
         bp_assign_count++;
@@ -68,54 +74,56 @@ class BasedPtrImpl {
     // Should be auto-generated if above version is disabled
     // BasedPtrImpl &operator=(const BasedPtrImpl &) = default;
 
-    T &operator*() const { 
+    template <typename U = T, EnableIfNotVoid<U> = 0>
+    U &operator*() const {
 #ifdef INSTRUMENT_POINTER_OP
         bp_indirect_count++;
 #endif
-		return *get(); 
-	}
-
-    T *operator->() const { 
-#ifdef INSTRUMENT_POINTER_OP
-        bp_arrow_count++;
-#endif   
-		return get();
-	}
-
-    T &operator[](const int index) const { 
-#ifdef INSTRUMENT_POINTER_OP
-        bp_subscript_count++;
-#endif   	    
-		return get()[index];
+        return *get();
     }
 
-    operator T *() const { 
+    T *operator->() const {
 #ifdef INSTRUMENT_POINTER_OP
-        bp_cast_count++;
-#endif   	    
-		return get(); 
-	}
+        bp_arrow_count++;
+#endif
+        return get();
+    }
 
-    operator RelPtr<T>() const { 
+    template <typename U = T, EnableIfNotVoid<U> = 0>
+    U &operator[](const int index) const {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_subscript_count++;
+#endif
+        return get()[index];
+    }
+
+    operator T *() const {
 #ifdef INSTRUMENT_POINTER_OP
         bp_cast_count++;
 #endif
-	    return get(); 
-	}
+        return get();
+    }
+
+    operator RelPtr<T>() const {
+#ifdef INSTRUMENT_POINTER_OP
+        bp_cast_count++;
+#endif
+        return get();
+    }
 
     // Allow conversion from optimized "embedded" case to general case
     operator BasedPtrImpl<T, false>() const {
 #ifdef INSTRUMENT_POINTER_OP
         bp_cast_count++;
 #endif
-	    return get(); 
-	}
+        return get();
+    }
 
-    bool operator!() const { 
+    bool operator!() const {
 #ifdef INSTRUMENT_POINTER_OP
         bp_negate_count++;
 #endif
-	    return ocrGuidIsNull(target_guid_); 
+        return ocrGuidIsNull(target_guid_);
     }
 
     bool operator==(const BasedPtrImpl &other) const {
@@ -140,6 +148,12 @@ class BasedPtrImpl {
     }
 
     // TODO - implement math operators, like increment and decrement
+
+    template <typename U = T,
+              EnableIf<embedded && std::is_same<T, U>::value> = 0>
+    bool target_is_local() {
+        return ocrGuidIsUninitialized(target_guid_);
+    }
 
  private:
     ocrGuid_t target_guid_;
@@ -175,7 +189,7 @@ class BasedPtrImpl {
             ocrDbGetSize(target_guid_, &db_size);
             ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
             sanityCheck(base, db_size, ptr);
-		}
+        }
 #endif
     }
 
@@ -247,13 +261,13 @@ class RelPtr {
 
     RelPtr(const RelPtr &other) { set(other); }
 
-    explicit RelPtr(const T *other) { set(other); }
+    RelPtr(const T *other) { set(other); }
 
     // TODO - ensure that default assignment operator still works correctly
     RelPtr<T> &operator=(const RelPtr &other) {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_assign_count++;
-#endif   
+#endif
         set(other);
         return *this;
     }
@@ -261,59 +275,61 @@ class RelPtr {
     RelPtr<T> &operator=(const T *other) {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_assign_count++;
-#endif   
+#endif
         set(other);
         return *this;
     }
 
-    T &operator*() const { 
+    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
+    U &operator*() const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_indirect_count++;
-#endif   
-	    return *get(); 
-	}
+#endif
+        return *get();
+    }
 
-    T *operator->() const { 
+    T *operator->() const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_arrow_count++;
-#endif   
-	    return get(); 
-	}
+#endif
+        return get();
+    }
 
-    T &operator[](const int index) const {
+    template <typename U = T, internal::EnableIfNotVoid<U> = 0>
+    U &operator[](const int index) const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_subscript_count++;
-#endif   
-        return get()[index]; 
-	}
+#endif
+        return get()[index];
+    }
 
-    operator T *() const { 
+    operator T *() const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_cast_count++;
-#endif   
-        return get(); 
-	}
+#endif
+        return get();
+    }
 
     operator BasedPtr<T>() const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_cast_count++;
-#endif   
-        return get(); 
-	}
+#endif
+        return get();
+    }
 
     bool operator!() const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_negate_count++;
-#endif   
-        return offset_ == 0; 
-	}
+#endif
+        return offset_ == 0;
+    }
 
     bool operator==(const RelPtr &other) const {
 #ifdef INSTRUMENT_POINTER_OP
         internal::rp_equal_count++;
-#endif   
-        return get() == other.get(); 
-	}
+#endif
+        return get() == other.get();
+    }
 
     // TODO - implement math operators, like increment and decrement
 
@@ -331,12 +347,11 @@ class RelPtr {
             ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
             offset_ = internal::CombineBaseOffset(-base_ptr(), ptr);
 #ifdef SANITY_CHECK
-		    ocrGuid_t guid_out;
-		    ptrdiff_t offset_out;
-	        internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
-                                       false);
+            ocrGuid_t guid_out;
+            ptrdiff_t offset_out;
+            internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
+                                           false);
 #endif
-
         }
     }
 
@@ -347,15 +362,14 @@ class RelPtr {
         } else {
             ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
 #ifdef SANITY_CHECK
-		    ocrGuid_t guid_out;
-		    ptrdiff_t offset_out;
-	        internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
-                                       false);
+            ocrGuid_t guid_out;
+            ptrdiff_t offset_out;
+            internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
+                                           false);
 #endif
             return reinterpret_cast<T *>(target);
         }
     }
-
 };
 
 }  // namespace ocxxr
