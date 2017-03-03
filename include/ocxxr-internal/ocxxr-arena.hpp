@@ -46,10 +46,14 @@ class DatablockAllocator {
         assert(state_ != nullptr && "Uninitialized allocator");
         const ptrdiff_t offset = state_->offset;
         ptrdiff_t start = (offset + alignment - 1) & (-alignment);
-        state_->offset = start + size;
-        assert(state_->offset <= state_->size &&
-               "Datablock allocator overflow");
-        return &buffer_[start];
+        const ptrdiff_t offset_prime = start + size;
+        if (offset_prime > state_->size) {
+            // return NULL if allocation fails
+            return nullptr;
+        } else {
+            state_->offset = offset_prime;
+            return &buffer_[start];
+        }
     }
 
     // FIXME - I don't know if these alignment checks are sufficient,
@@ -122,6 +126,7 @@ T &GetArenaRoot(void *dbPtr) {
 template <typename T, typename... Ts>
 T *NewIn(internal::dballoc::DatablockAllocator arena, Ts &&... args) {
     auto mem = arena.allocate(sizeof(T));
+    if (!mem) return nullptr;
     return ::new (mem) T(std::forward<Ts>(args)...);
 }
 
@@ -143,8 +148,10 @@ struct TypeInitializer<
 template <typename T>
 T *NewArrayIn(internal::dballoc::DatablockAllocator arena, size_t count) {
     T *data = reinterpret_cast<T *>(arena.allocate(sizeof(T), count));
-    for (size_t i = 0; i < count; i++) {
-        TypeInitializer<T>::init(data[i]);
+    if (data) {
+        for (size_t i = 0; i < count; i++) {
+            TypeInitializer<T>::init(data[i]);
+        }
     }
     return data;
 }
