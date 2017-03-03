@@ -72,7 +72,9 @@ class DatablockAllocator {
         } else if (size <= 8) {
             return allocateAligned(size * count, 8);
         } else {
-            return allocateAligned(size * count, 16);
+            // FIXME - 16-byte alignment was causing problems, so now everything
+            // is 8-byte aligned
+            return allocateAligned(size * count, 8);
         }
     }
 
