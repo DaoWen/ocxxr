@@ -292,10 +292,16 @@ class Arena : public AcquiredData {
     /// Destroy this Arena.
     void Destroy() const { handle_.Destroy(); }
 
-
     AllocatorState SaveState(void) { return state_->header.SaveState(); }
 
-    void RestoreState(AllocatorState state) { state_->header.RestoreState(state); }
+    void RestoreState(AllocatorState state) {
+        state_->header.RestoreState(state);
+    }
+
+    void *end_ptr() {
+        char *buffer = reinterpret_cast<char *>(state_);
+        return reinterpret_cast<void *>(&buffer[state_->header.offset]);
+    }
 
     template <typename U>
     friend void SetImplicitArena(Arena<U> arena);
