@@ -15,7 +15,7 @@ run_benchmarks() {
     # constants
     local thread_num=1
     # go!
-    echo "$label" >> $OUTPUT_FILE
+    #echo "$label" >> $OUTPUT_FILE
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
             printf "\n\n> Running test %s\n\n" $dir
@@ -50,13 +50,13 @@ export OUTPUT_FILE=$PWD/result.dat
 
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
-    echo "offset native" >> $OUTPUT_FILE
+    echo "native position_independent" >> $OUTPUT_FILE
     BASE_FLAGS="-DMEASURE_TIME=1"
     ITERS=10
     AWK_CMD='/elapsed time:/ { print $3 }'
     # original version
     printf "\n\n--------------------Position Independent Pointers--------------------\n"
-    run_benchmarks "position independent" "$BASE_FLAGS" "$AWK_CMD" $ITERS
+    run_benchmarks "position_independent" "$BASE_FLAGS" "$AWK_CMD" $ITERS
     # native pointer version
     printf "\n\n--------------------Native Pointers--------------------\n"
     run_benchmarks "native" "-DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS

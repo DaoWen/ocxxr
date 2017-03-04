@@ -113,7 +113,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     // Puts
     //
 
-    constexpr u64 kPutCount = 100000;
+    constexpr u64 kPutCount = 10000000;
 
     if (kVerboseMessages) {
         PRINTF("Starting puts\n");

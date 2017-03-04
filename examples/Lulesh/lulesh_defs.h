@@ -21,7 +21,7 @@ extern void *memset(void *s, int c, size_t n);
 #define EDGE_ELEMENTS 2
 #else
 // Larger problem size for x86
-#define EDGE_ELEMENTS 4
+#define EDGE_ELEMENTS 16
 #endif /* CNCOCR_TG */
 
 #define EDGE_NODES (EDGE_ELEMENTS + 1)

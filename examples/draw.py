@@ -14,7 +14,7 @@ from toolz.itertoolz import groupby
 from operator import itemgetter
 from csv import DictReader
 
-base_line_index = 1
+base_line_index = 0
 input = 'result.dat'
 f = open(input, 'r')
 legends = f.readline().strip().split(' ');
@@ -68,7 +68,7 @@ ax.set_xticks(ind + W / 2)
 ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Slowdown")
-plt.legend(rects, legends, loc='upper right').draw_frame(False)
+plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.3), ncol=2).draw_frame(False)
 plt.savefig(filename + '.eps', bbox_inches='tight', format='eps')
 
 
