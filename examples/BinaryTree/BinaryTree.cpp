@@ -12,14 +12,23 @@
 
 constexpr bool kVerboseMessages = false;
 
+#ifndef BT_PTR_TYPE
+#define BT_PTR_TYPE RelPtr
+#endif
+#ifndef BT_ARG_PTR_TYPE
+#define BT_ARG_PTR_TYPE BasedPtr
+#endif
+
 template <typename T>
-using Ptr = ocxxr::RelPtr<T>;
+using Ptr = ocxxr::BT_PTR_TYPE<T>;
+template <typename T>
+using ArgPtr = ocxxr::BT_ARG_PTR_TYPE<T>;
 
 template <typename K, typename V>
 class BinaryTree {
  public:
     static constexpr size_t kTreeSize =
-            (1 << 20);  // Allocate enough space for 1M entries
+            (1 << 24);  // Allocate enough space for 16M entries
 
     static ocxxr::Arena<BinaryTree> Create() {
         constexpr size_t bytes = sizeof(BinaryTree) + sizeof(Node) * kTreeSize;
@@ -66,6 +75,7 @@ class BinaryTree {
         if (!node) {
             // Base case 1: not found
             node = arena_.New<Node>(key, value);
+            assert(node && "Arena out of memory");
             return false;
         } else if (node->key == key) {
             // Base case 2: found
@@ -78,7 +88,7 @@ class BinaryTree {
         }
     };
 
-    bool Find(const K &key, Ptr<Node> node, V &output) {
+    bool Find(const K &key, ArgPtr<Node> node, V &output) {
         if (!node) {
             // Base case 1: not found
             return false;
@@ -99,7 +109,7 @@ u64 myhash(u64 x) {
 }
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
-	u32 n;
+    u32 n;
     if (args->argc() != 2) {
         n = 100000;
         PRINTF("Usage: BinaryTree <num>, defaulting to %" PRIu32 "\n", n);
@@ -120,7 +130,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     }
 
     for (u64 i = 0; i < kPutCount; i++) {
-        tree->Put(myhash(i), static_cast<char>('a' + i));
+        tree->Put(myhash(i), static_cast<char>('a' + i%26));
     }
 
     if (kVerboseMessages) {
@@ -136,7 +146,9 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     }
 
     char result[] = {'X', '\0'};
-    tree->Get(myhash(6), result[0]);
+    // Compute an index that should give us the value 'g'
+    constexpr u64 index = 26 * (kPutCount/32) + 6;
+    tree->Get(myhash(index), result[0]);
 
     if (kVerboseMessages) {
         PRINTF("Done with gets\n");
@@ -147,5 +159,6 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     //
 
     PRINTF("Result = %s\n", result);
+    assert(result[0] == 'g');
     ocxxr::Shutdown();
 }

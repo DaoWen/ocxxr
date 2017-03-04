@@ -70,8 +70,28 @@ elif [ "$EXPERIMENT_TYPE" = "op-count" ]; then
     # instrumented version
     printf "\n\n--------------------Count Operations--------------------\n"
     run_benchmarks "op count" "$BASE_FLAGS" "$AWK_CMD" $ITERS
+elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
+    rm -f $OUTPUT_FILE
+	BENCHMARKS="BinaryTree"
+	BASE_FLAGS="-DMEASURE_TIME=1"
+	ITERS=10
+    AWK_CMD='/elapsed time:/ { print $3 }'
+	echo "native relative based based_db" >> $OUTPUT_FILE
+	# native pointer version
+	printf "\n\n--------------------Native Pointers--------------------\n"
+    run_benchmarks "native" "-DBT_ARG_PTR_TYPE=RelPtr -DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
+	# relative pointer version
+	printf "\n\n--------------------Relative Pointers--------------------\n"
+    run_benchmarks "relative" "$BASE_FLAGS" "$AWK_CMD" $ITERS
+	# based pointer version
+	printf "\n\n--------------------Based Pointers--------------------\n"
+    run_benchmarks "based" "-DBT_PTR_TYPE=BasedPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
+	# based db pointer version
+	printf "\n\n--------------------Based Db Pointers--------------------\n"
+    run_benchmarks "based_db" "-DBT_PTR_TYPE=BasedDbPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
+    python draw2.py
 else
-    echo "Please specify experiment name: [time|op-count]"
+    echo "Please specify experiment name: [time|op-count|bt-variants]"
 fi
 
 
