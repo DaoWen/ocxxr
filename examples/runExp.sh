@@ -9,7 +9,17 @@ outputFile=$(pwd)/result.dat
 [ -z $OCR_INSTALL_ROOT ] && export OCR_INSTALL_ROOT=$XSTG_ROOT/ocr/ocr/install
 
 # Which benchmarks to run?
-BENCHMARKS="BinaryTree Hashtable Tempest Lulesh"
+if [ -z "$2" ]; then
+    BENCHMARKS="BinaryTree Hashtable Tempest Lulesh"
+else
+    BENCHMARKS="$2"
+    for d in $BENCHMARKS; do
+        if ! [ -d $d ]; then
+            echo "Experiment directory not found: $d"
+            exit 1
+        fi
+    done
+fi
 
 if [ -z $1 ]; then
     echo "Please specify experiment name: [time|op-count]"
@@ -20,7 +30,7 @@ elif [ $1 = "time" ]; then
     touch $outputFile
 
     echo "offset native" >> $outputFile
-#origin version
+    # original version
     printf "\n\n--------------------Offset Based Relptr--------------------"
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
@@ -28,7 +38,7 @@ elif [ $1 = "time" ]; then
             echo \# $dir offset >> $outputFile
             pushd $dir > /dev/null
             index=0
-			make -f Makefile.x86 clean
+            make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
                 CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/elapsed time:/ { print $3 }' >> $outputFile
@@ -38,7 +48,7 @@ elif [ $1 = "time" ]; then
         fi
     done
 
-#native pointer version
+    # native pointer version
     printf "\n\n--------------------Native Pointer Based Relptr--------------------"
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
@@ -46,7 +56,7 @@ elif [ $1 = "time" ]; then
             echo \# $dir native >> $outputFile
             pushd $dir > /dev/null
             index=0
-			make -f Makefile.x86 clean
+            make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
                 CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DOCXXR_USE_NATIVE_POINTERS=1 -DMEASURE_TIME=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/elapsed time:/ { print $3 }' >> $outputFile
@@ -63,7 +73,7 @@ elif [ $1 = "op-count" ]; then
     touch $outputFile
     iteration=1
 
-#instrument version
+    # instrumented version
     printf "\n\n--------------------Count Operation--------------------"
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
@@ -71,7 +81,7 @@ elif [ $1 = "op-count" ]; then
             echo \# $dir>> $outputFile
             pushd $dir > /dev/null
             index=0
-			make -f Makefile.x86 clean
+            make -f Makefile.x86 clean
             while [ $index -lt $iteration ]
             do
                 CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DINSTRUMENT_POINTER_OP=1 -DNDEBUG=1" make -f Makefile.x86 run | awk '/^rp|^bp/'>> $outputFile
