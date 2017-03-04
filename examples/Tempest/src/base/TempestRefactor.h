@@ -3,9 +3,10 @@
 
 #define TEMPEST_USE_NATIVE_PTRS (OCXXR_USE_NATIVE_POINTERS || (!defined(USE_OCR_TEST) && !defined(USE_OCR)))
 
+#include "ocxxr.hpp"
+
 #if !TEMPEST_USE_NATIVE_PTRS
 
-#include "ocxxr.hpp"
 #include "ocr_relative_ptr.hpp"
 //#include "ocr_db_alloc.hpp"
 #include "ocr_vector.hpp"
@@ -33,8 +34,13 @@ namespace TR {
     template<typename T> using Ptr = T*;
     template<typename T> using Vector = std::vector<T>;
 
+#   if 0
 #   define TR_DELETE(p) delete p
 #   define TR_ARRAY_DELETE(p) delete[] p
+#   else
+#   define TR_DELETE(p) /* no-op */
+#   define TR_ARRAY_DELETE(p) /* no-op */
+#   endif
 
 #endif
 
