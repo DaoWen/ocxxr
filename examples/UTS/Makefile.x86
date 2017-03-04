@@ -192,5 +192,4 @@ endif
 #CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
 #LDFLAGS += -fsanitize=address
 
-longrun: WORKLOAD_ARGS := -t 0 -b 500 -q 0.124875 -m 8 -r 42
-longrun: run
+run: WORKLOAD_ARGS := -t 1 -a 3 -d 10 -b 4 -r 19
