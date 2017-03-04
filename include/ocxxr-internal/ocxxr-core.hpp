@@ -6,6 +6,17 @@
 #include <iterator>
 
 namespace ocxxr {
+#if defined MEASURE_TIME || defined INSTRUMENT_POINTER_OP
+namespace internal {
+void recordEnd();
+}
+#endif
+
+#ifdef MEASURE_TIME
+namespace internal {
+void outputTime();
+}
+#endif
 
 #ifdef INSTRUMENT_POINTER_OP
 namespace internal {
@@ -70,6 +81,14 @@ static_assert(internal::IsLegalHandle<NullHandle>::value,
 
 /// Shut down OCR.
 inline void Shutdown() {
+#if defined MEASURE_TIME || defined INSTRUMENT_POINTER_OP
+    internal::recordEnd();
+#endif
+
+#ifdef MEASURE_TIME
+    internal::outputTime();
+#endif
+
 #ifdef INSTRUMENT_POINTER_OP
     internal::outputAllCount();
 #endif

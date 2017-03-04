@@ -9,14 +9,7 @@
 
 #include <cstdlib>
 
-#ifdef MEASURE_TIME
-#include <ctime>
-#include <ratio>
-#include <chrono>
-using namespace std::chrono;
 
-high_resolution_clock::time_point start;
-#endif
 
 enum HashtableOpRole {
     kRoleInvalid = 'X',
@@ -430,13 +423,6 @@ void FinalTask(ocxxr::Arena<void> table, ocxxr::Datablock<char> result,
     table.Destroy();  // FIXME - should do deep destroy
     char res_str[] = {*result ? *result : 'X', '\0'};
     PRINTF("Result = %s\n", res_str);
-
-#ifdef MEASURE_TIME
-	high_resolution_clock::time_point end = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(end - start);
-	PRINTF("elapsed time: %f second\n", time_span.count());
-#endif
-
 	ocxxr::Shutdown();
 }
 
@@ -468,10 +454,6 @@ void CreateBlockTask(CreateTaskParam param, ocxxr::Arena<Hashtable<u64, char>> t
 }
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
-#ifdef MEASURE_TIME
-    start = high_resolution_clock::now();
-#endif
-
     u32 n;
     if (args->argc() != 2) {
         n = 100000;

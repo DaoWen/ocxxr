@@ -1,22 +1,10 @@
 #include "lulesh.hpp"
 
-#ifdef MEASURE_TIME
-#include <ctime>
-#include <ratio>
-#include <chrono>
-using namespace std::chrono;
-
-high_resolution_clock::time_point start;
-#endif
 
 
 extern "C" {
 void lulesh_cncInitialize(luleshArgs *args, luleshCtx *ctx0) {
     LuleshCtx *ctx = static_cast<LuleshCtx*>(ctx0);
-
-#ifdef MEASURE_TIME
-    start = high_resolution_clock::now();
-#endif
 
     // Put "stress_partial" items
     vector *stress_partial = (decltype(stress_partial))cncItemAlloc(sizeof(*stress_partial));
@@ -146,13 +134,6 @@ void lulesh_cncInitialize(luleshArgs *args, luleshCtx *ctx0) {
 
 
 void lulesh_cncFinalize(double final_origin_energy, luleshCtx *ctx0) {
-
-#ifdef MEASURE_TIME
-	high_resolution_clock::time_point end = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(end - start);
-	PRINTF("elapsed time: %f second\n", time_span.count());
-#endif
-
 	printf("\nDomain Size = %d\n", EDGE_ELEMENTS);
 	printf("Final Origin Energy =  %2.6e\n", final_origin_energy);
 
