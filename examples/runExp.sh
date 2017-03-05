@@ -47,7 +47,7 @@ for d in $BENCHMARKS; do
 done
 export NOW=$(date +"%F-%T")
 export OUTPUT_FILE="$PWD/result-$NOW.dat"
-$echo $OUTPUT_FILE
+#echo $OUTPUT_FILE
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
     echo "native position_independent sanity_check" >> $OUTPUT_FILE
