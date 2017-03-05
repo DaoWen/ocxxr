@@ -11,8 +11,13 @@ namespace ocxxr {
 // FIXME - should also support conversion to superclass pointer types
 // e.g., BasedPtr<Y> y = ...; BasedPtr<X> x = y; should work if Y extends X
 
+#if OCXXR_USE_NATIVE_POINTERS
+template <typename T>
+using RelPtr = T*;
+#else
 template <typename T>
 class RelPtr;
+# endif
 
 namespace internal {
 #ifdef INSTRUMENT_POINTER_OP
@@ -106,12 +111,14 @@ class BasedPtrImpl {
         return get();
     }
 
+#if !(OCXXR_USE_NATIVE_POINTERS)
     operator RelPtr<T>() const {
 #ifdef INSTRUMENT_POINTER_OP
         bp_cast_count++;
 #endif
         return get();
     }
+#endif
 
     // Allow conversion from optimized "embedded" case to general case
     operator BasedPtrImpl<T, false>() const {
@@ -259,6 +266,7 @@ using BasedPtr = internal::BasedPtrImpl<T, false>;
 template <typename T>
 using BasedDbPtr = internal::BasedPtrImpl<T, true>;
 
+#if !(OCXXR_USE_NATIVE_POINTERS)
 /**
  * This is our "relative pointer" class.
  * You should be able to use it pretty much just like a normal pointer.
@@ -390,6 +398,7 @@ class RelPtr {
         }
     }
 };
+#endif // OCXXR_USE_NATIVE_POINTERS
 
 }  // namespace ocxxr
 
