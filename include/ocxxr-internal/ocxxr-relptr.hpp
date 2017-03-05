@@ -27,6 +27,7 @@ void outputAllCount();
 inline void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
     ptrdiff_t end_ptr = base_ptr + db_size;
     if (start_ptr < base_ptr || start_ptr >= end_ptr) {
+//        FIX ME: failed in BinaryTree and UTS
 //        PRINTF("base_ptr = %lx, db_size = %lu, start_ptr = %lx\n", base_ptr, db_size, start_ptr);
 //        abort();
     }
