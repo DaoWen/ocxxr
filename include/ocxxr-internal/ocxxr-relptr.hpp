@@ -24,7 +24,7 @@ void outputAllCount();
 #endif
 
 #ifdef SANITY_CHECK
-void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
+inline void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
     ptrdiff_t end_ptr = base_ptr + db_size;
     if (start_ptr < base_ptr || start_ptr >= end_ptr) {
         abort();
