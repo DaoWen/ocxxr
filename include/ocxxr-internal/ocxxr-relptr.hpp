@@ -17,9 +17,9 @@ class RelPtr;
 namespace internal {
 #ifdef INSTRUMENT_POINTER_OP
 extern std::atomic<u64> rp_indirect_count, rp_arrow_count, rp_subscript_count,
-        rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count;
+        rp_cast_count, rp_equal_count, rp_assign_count, rp_negate_count, rp_get_count, rp_set_count;
 extern std::atomic<u64> bp_indirect_count, bp_arrow_count, bp_subscript_count,
-        bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count;
+        bp_cast_count, bp_equal_count, bp_assign_count, bp_negate_count, bp_get_count, bp_set_count;
 void outputAllCount();
 #endif
 
@@ -175,6 +175,10 @@ class BasedPtrImpl {
             ocrDbGetSize(target_guid_, &db_size);
             sanityCheck(base, db_size, target);
 #endif
+
+#ifdef INSTRUMENT_POINTER_OP
+            bp_set_count++;
+#endif
         }
     }
 
@@ -191,9 +195,16 @@ class BasedPtrImpl {
             sanityCheck(base, db_size, ptr);
         }
 #endif
+
+#ifdef INSTRUMENT_POINTER_OP
+            bp_set_count++;
+#endif
     }
 
     T *get() const {
+#ifdef INSTRUMENT_POINTER_OP
+            bp_get_count++;
+#endif
         assert(!ocrGuidIsError(target_guid_));
         if (ocrGuidIsNull(target_guid_)) {
             return nullptr;
@@ -340,7 +351,10 @@ class RelPtr {
 
     void set(const RelPtr &other) { set(other.get()); }
 
-    void set(const T *other) {
+    void set(const T *other) {	
+#ifdef INSTRUMENT_POINTER_OP
+            internal::rp_set_count++;
+#endif
         if (other == nullptr) {
             offset_ = 0;
         } else {
@@ -356,6 +370,9 @@ class RelPtr {
     }
 
     T *get() const {
+#ifdef INSTRUMENT_POINTER_OP
+            internal::rp_get_count++;
+#endif
         assert(offset_ != 1);
         if (offset_ == 0) {
             return nullptr;

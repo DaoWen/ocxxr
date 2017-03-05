@@ -44,8 +44,8 @@ OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 #endif
 
 #ifdef INSTRUMENT_POINTER_OP
-    std::atomic<u64> rp_indirect_count(0), rp_arrow_count(0), rp_subscript_count(0), rp_cast_count(0), rp_equal_count(0), rp_assign_count(0), rp_negate_count(0);
-	std::atomic<u64> bp_indirect_count(0), bp_arrow_count(0), bp_subscript_count(0), bp_cast_count(0), bp_equal_count(0), bp_assign_count(0), bp_negate_count(0);
+    std::atomic<u64> rp_indirect_count(0), rp_arrow_count(0), rp_subscript_count(0), rp_cast_count(0), rp_equal_count(0), rp_assign_count(0), rp_negate_count(0), rp_get_count(0), rp_set_count(0);
+	std::atomic<u64> bp_indirect_count(0), bp_arrow_count(0), bp_subscript_count(0), bp_cast_count(0), bp_equal_count(0), bp_assign_count(0), bp_negate_count(0), bp_get_count(0), bp_set_count(0);
     void outputAllCount() {
 	    using namespace std;
 		using namespace std::chrono;
@@ -59,7 +59,8 @@ OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 		cout << "bp_cast_count " << bp_cast_count.load() / time_span << endl;
 		cout << "bp_assign_count " << bp_assign_count.load() / time_span << endl;
 		cout << "bp_negate_count " << bp_negate_count.load() / time_span << endl;
-
+        cout << "bp_get_count " << bp_get_count.load() / time_span << endl;
+		cout << "bp_set_count " << bp_set_count.load() / time_span << endl;
 		cout << "rp_equal_count " << rp_equal_count.load() / time_span << endl;
 		cout << "rp_indirect_count " << rp_indirect_count.load() / time_span << endl;
 		cout << "rp_arrow_count " << rp_arrow_count.load() / time_span << endl;
@@ -67,7 +68,8 @@ OCXXR_THREAD_LOCAL TaskLocalState *_task_local_state;
 		cout << "rp_cast_count " << rp_cast_count.load() / time_span << endl;
 		cout << "rp_assign_count " << rp_assign_count.load() / time_span << endl;
 		cout << "rp_negate_count " << rp_negate_count.load() / time_span << endl;
-
+        cout << "rp_get_count " << rp_get_count.load() / time_span << endl;
+		cout << "rp_set_count " << rp_set_count.load() / time_span << endl;
 	}
 #endif
 
