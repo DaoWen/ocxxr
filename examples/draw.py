@@ -68,7 +68,7 @@ ax.set_xticks(ind + W / 2)
 ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Slowdown")
-plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.3), ncol=2).draw_frame(False)
+plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.4), ncol=2).draw_frame(False)
 plt.savefig(filename + '.eps', bbox_inches='tight', format='eps')
 
 

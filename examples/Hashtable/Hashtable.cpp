@@ -322,6 +322,7 @@ struct HashtableHelper {
             PRINTF("Hashed to bucket %u...\n", index);
         }
         // save bucket info
+        params->bucketHead = buckets[0];
         params->bucketHead = buckets[index];
         params->oldFirstBlock = nullptr;
         params->checkedFirst = false;

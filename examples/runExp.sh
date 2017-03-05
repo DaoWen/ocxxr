@@ -60,8 +60,8 @@ if [ "$EXPERIMENT_TYPE" = "time" ]; then
     # native pointer version
     printf "\n\n--------------------Native Pointers--------------------\n"
     run_benchmarks "native" "-DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
-	# sanity check version
-	printf "\n\n--------------------Sanity Check--------------------\n"
+    # sanity check version
+    printf "\n\n--------------------Sanity Check--------------------\n"
     run_benchmarks "sanity_check" "-DSANITY_CHECK=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
     # plot
     python draw.py
@@ -75,22 +75,22 @@ elif [ "$EXPERIMENT_TYPE" = "op-count" ]; then
     run_benchmarks "op count" "$BASE_FLAGS" "$AWK_CMD" $ITERS
 elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
     rm -f $OUTPUT_FILE
-	BENCHMARKS="BinaryTree"
-	BASE_FLAGS="-DMEASURE_TIME=1"
-	ITERS=10
+    BENCHMARKS="BinaryTree"
+    BASE_FLAGS="-DMEASURE_TIME=1"
+    ITERS=10
     AWK_CMD='/elapsed time:/ { print $3 }'
-	echo "native relative based based_db" >> $OUTPUT_FILE
-	# native pointer version
-	printf "\n\n--------------------Native Pointers--------------------\n"
+    echo "native relative based based_db" >> $OUTPUT_FILE
+    # native pointer version
+    printf "\n\n--------------------Native Pointers--------------------\n"
     run_benchmarks "native" "-DBT_ARG_PTR_TYPE=RelPtr -DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
-	# relative pointer version
-	printf "\n\n--------------------Relative Pointers--------------------\n"
+    # relative pointer version
+    printf "\n\n--------------------Relative Pointers--------------------\n"
     run_benchmarks "relative" "$BASE_FLAGS" "$AWK_CMD" $ITERS
-	# based pointer version
-	printf "\n\n--------------------Based Pointers--------------------\n"
+    # based pointer version
+    printf "\n\n--------------------Based Pointers--------------------\n"
     run_benchmarks "based" "-DBT_PTR_TYPE=BasedPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
-	# based db pointer version
-	printf "\n\n--------------------Based Db Pointers--------------------\n"
+    # based db pointer version
+    printf "\n\n--------------------Based Db Pointers--------------------\n"
     run_benchmarks "based_db" "-DBT_PTR_TYPE=BasedDbPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
     python draw2.py
 else

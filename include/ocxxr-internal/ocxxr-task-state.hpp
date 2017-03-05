@@ -206,11 +206,11 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
         ptrdiff_t db_size = 0;
         ocrDbGetSize(i->guid(), reinterpret_cast<u64 *>(&db_size));
         ptrdiff_t end_addr = i->base_addr() + db_size;
-#if 0
+#if 1
         if (!(dst_addr <= end_addr)) {
-            PRINTF("db size is %lu, src is %p, dst is %lx, target is %p, base "
-                   "is %lx, end is %lx\n",
-                   db_size, source, dst_addr, target, i->base_addr(), end_addr);
+//            PRINTF("db size is %lu, src is %p, dst is %lx, target is %p, base "
+//                   "is %lx, end is %lx\n",
+//                   db_size, source, dst_addr, target, i->base_addr(), end_addr);
         }
 #endif
         assert(i != a_end);

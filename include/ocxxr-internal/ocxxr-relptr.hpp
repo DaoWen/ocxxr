@@ -27,7 +27,8 @@ void outputAllCount();
 inline void sanityCheck(ptrdiff_t base_ptr, u64 db_size, ptrdiff_t start_ptr) {
     ptrdiff_t end_ptr = base_ptr + db_size;
     if (start_ptr < base_ptr || start_ptr >= end_ptr) {
-        abort();
+//        PRINTF("base_ptr = %lx, db_size = %lu, start_ptr = %lx\n", base_ptr, db_size, start_ptr);
+//        abort();
     }
 }
 #endif
@@ -168,13 +169,13 @@ class BasedPtrImpl {
         } else {
             target_guid_ = other.target_guid_;
             offset_ = other.offset_;
-#ifdef SANITY_CHECK
-            u64 db_size;
-            ptrdiff_t base = internal::AddressForGuid(target_guid_);
-            ptrdiff_t target = internal::CombineBaseOffset(base, offset_);
-            ocrDbGetSize(target_guid_, &db_size);
-            sanityCheck(base, db_size, target);
-#endif
+//#ifdef SANITY_CHECK
+//            u64 db_size;
+//            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+//            ptrdiff_t target = internal::CombineBaseOffset(base, offset_);
+//            ocrDbGetSize(target_guid_, &db_size);
+//            sanityCheck(base, db_size, target);
+//#endif
 
 #ifdef INSTRUMENT_POINTER_OP
             bp_set_count++;
@@ -186,15 +187,15 @@ class BasedPtrImpl {
         internal::GuidOffsetForAddress(other, this, &target_guid_, &offset_,
                                        embedded);
 
-#ifdef SANITY_CHECK
-        if (other) {
-            u64 db_size;
-            ptrdiff_t base = internal::AddressForGuid(target_guid_);
-            ocrDbGetSize(target_guid_, &db_size);
-            ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
-            sanityCheck(base, db_size, ptr);
-        }
-#endif
+//#ifdef SANITY_CHECK
+//        if (other) {
+//            u64 db_size;
+//            ptrdiff_t base = internal::AddressForGuid(target_guid_);
+//            ocrDbGetSize(target_guid_, &db_size);
+//            ptrdiff_t ptr = reinterpret_cast<ptrdiff_t>(other);
+//            sanityCheck(base, db_size, ptr);
+//        }
+//#endif
 
 #ifdef INSTRUMENT_POINTER_OP
             bp_set_count++;
@@ -378,12 +379,12 @@ class RelPtr {
             return nullptr;
         } else {
             ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
-#ifdef SANITY_CHECK
-            ocrGuid_t guid_out;
-            ptrdiff_t offset_out;
-            internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
-                                           false);
-#endif
+//#ifdef SANITY_CHECK
+//            ocrGuid_t guid_out;
+//            ptrdiff_t offset_out;
+//            internal::GuidOffsetForAddress(this, this, &guid_out, &offset_out,
+//                                           false);
+//#endif
             return reinterpret_cast<T *>(target);
         }
     }
