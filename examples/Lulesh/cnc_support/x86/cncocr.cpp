@@ -58,4 +58,22 @@ void cncItemFree(void *itemPtr) {
     }
 }
 
+// ocxxr indirect calls
+
+void ocxxr_start_task(void) {
+    ocxxr::internal::PushTaskState();
+}
+
+void ocxxr_end_task(void) {
+    ocxxr::internal::PopTaskState();
+}
+
+void ocxxr_add_db(ocrEdtDep_t *dep) {
+    ocxxr::internal::bookkeeping::AddDatablock(dep->guid, dep->ptr);
+}
+
+void ocxxr_remove_db(ocrEdtDep_t *dep) {
+    ocxxr::internal::bookkeeping::RemoveDatablock(dep->guid);
+}
+
 } // extern C

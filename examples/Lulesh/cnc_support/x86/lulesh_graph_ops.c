@@ -257,7 +257,12 @@ static ocrGuid_t _stepsFinishEdt(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_lock(&_cncDebugMutex);
     #endif
+    assert(!depv[0].ptr && "UNUSED");
+    assert(!depv[1].ptr && "UNUSED");
+    ocxxr_start_task();
+    ocxxr_add_db(&depv[2]);
     lulesh_cncInitialize(args, ctx);
+    ocxxr_end_task();
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif

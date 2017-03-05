@@ -17,13 +17,16 @@ extern pthread_mutex_t _cncDebugMutex;
 
 /* cncFinalize setup/teardown function */
 ocrGuid_t _lulesh_cncStep_cncFinalize(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
 
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double final_origin_energy;
+    ocxxr_add_db(&depv[_edtSlot]);
     final_origin_energy = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -47,6 +50,7 @@ ocrGuid_t _lulesh_cncStep_cncFinalize(u32 paramc, u64 paramv[], u32 depc, ocrEdt
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -120,7 +124,9 @@ void cncPrescribe_cncFinalize(luleshCtx *ctx) {
 
 /* compute_stress_partial setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_stress_partial(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -129,9 +135,11 @@ ocrGuid_t _lulesh_cncStep_compute_stress_partial(u32 paramc, u64 paramv[], u32 d
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double pressure;
+    ocxxr_add_db(&depv[_edtSlot]);
     pressure = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double viscosity;
+    ocxxr_add_db(&depv[_edtSlot]);
     viscosity = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex *neighbor_position;
@@ -142,6 +150,7 @@ ocrGuid_t _lulesh_cncStep_compute_stress_partial(u32 paramc, u64 paramv[], u32 d
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -168,6 +177,7 @@ ocrGuid_t _lulesh_cncStep_compute_stress_partial(u32 paramc, u64 paramv[], u32 d
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -260,7 +270,9 @@ void cncPrescribe_compute_stress_partial(cncTag_t iteration, cncTag_t element_id
 
 /* compute_hourglass_partial setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_hourglass_partial(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -269,9 +281,11 @@ ocrGuid_t _lulesh_cncStep_compute_hourglass_partial(u32 paramc, u64 paramv[], u3
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double element_volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     element_volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double sound_speed;
+    ocxxr_add_db(&depv[_edtSlot]);
     sound_speed = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex *neighbor_position;
@@ -282,6 +296,7 @@ ocrGuid_t _lulesh_cncStep_compute_hourglass_partial(u32 paramc, u64 paramv[], u3
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -294,6 +309,7 @@ ocrGuid_t _lulesh_cncStep_compute_hourglass_partial(u32 paramc, u64 paramv[], u3
         vector *_item;
         neighbor_velocity = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -321,6 +337,7 @@ ocrGuid_t _lulesh_cncStep_compute_hourglass_partial(u32 paramc, u64 paramv[], u3
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -422,7 +439,9 @@ void cncPrescribe_compute_hourglass_partial(cncTag_t iteration, cncTag_t element
 
 /* reduce_force setup/teardown function */
 ocrGuid_t _lulesh_cncStep_reduce_force(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -438,6 +457,7 @@ ocrGuid_t _lulesh_cncStep_reduce_force(u32 paramc, u64 paramv[], u32 depc, ocrEd
         vector *_item;
         neighbor_stress_partial = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -450,6 +470,7 @@ ocrGuid_t _lulesh_cncStep_reduce_force(u32 paramc, u64 paramv[], u32 depc, ocrEd
         vector *_item;
         neighbor_hourglass_partial = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -477,6 +498,7 @@ ocrGuid_t _lulesh_cncStep_reduce_force(u32 paramc, u64 paramv[], u32 depc, ocrEd
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -566,7 +588,9 @@ void cncPrescribe_reduce_force(cncTag_t iteration, cncTag_t node_id, luleshCtx *
 
 /* compute_velocity setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_velocity(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -575,12 +599,15 @@ ocrGuid_t _lulesh_cncStep_compute_velocity(u32 paramc, u64 paramv[], u32 depc, o
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double delta_time;
+    ocxxr_add_db(&depv[_edtSlot]);
     delta_time = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector force;
+    ocxxr_add_db(&depv[_edtSlot]);
     force = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector previous_velocity;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_velocity = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -604,6 +631,7 @@ ocrGuid_t _lulesh_cncStep_compute_velocity(u32 paramc, u64 paramv[], u32 depc, o
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -692,7 +720,9 @@ void cncPrescribe_compute_velocity(cncTag_t iteration, cncTag_t node_id, luleshC
 
 /* compute_position setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_position(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -701,12 +731,15 @@ ocrGuid_t _lulesh_cncStep_compute_position(u32 paramc, u64 paramv[], u32 depc, o
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double delta_time;
+    ocxxr_add_db(&depv[_edtSlot]);
     delta_time = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector velocity;
+    ocxxr_add_db(&depv[_edtSlot]);
     velocity = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex previous_position;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_position = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -730,6 +763,7 @@ ocrGuid_t _lulesh_cncStep_compute_position(u32 paramc, u64 paramv[], u32 depc, o
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -818,7 +852,9 @@ void cncPrescribe_compute_position(cncTag_t iteration, cncTag_t node_id, luleshC
 
 /* compute_volume setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_volume(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -834,6 +870,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume(u32 paramc, u64 paramv[], u32 depc, ocr
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -860,6 +897,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume(u32 paramc, u64 paramv[], u32 depc, ocr
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -940,7 +978,9 @@ void cncPrescribe_compute_volume(cncTag_t iteration, cncTag_t element_id, lulesh
 
 /* compute_volume_derivative setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_volume_derivative(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -949,6 +989,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume_derivative(u32 paramc, u64 paramv[], u3
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double delta_time;
+    ocxxr_add_db(&depv[_edtSlot]);
     delta_time = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex *neighbor_position;
@@ -959,6 +1000,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume_derivative(u32 paramc, u64 paramv[], u3
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -971,6 +1013,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume_derivative(u32 paramc, u64 paramv[], u3
         vector *_item;
         neighbor_velocity = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -998,6 +1041,7 @@ ocrGuid_t _lulesh_cncStep_compute_volume_derivative(u32 paramc, u64 paramv[], u3
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1092,7 +1136,9 @@ void cncPrescribe_compute_volume_derivative(cncTag_t iteration, cncTag_t element
 
 /* compute_gradients setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_gradients(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1101,6 +1147,7 @@ ocrGuid_t _lulesh_cncStep_compute_gradients(u32 paramc, u64 paramv[], u32 depc, 
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex *neighbor_position;
@@ -1111,6 +1158,7 @@ ocrGuid_t _lulesh_cncStep_compute_gradients(u32 paramc, u64 paramv[], u32 depc, 
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1123,6 +1171,7 @@ ocrGuid_t _lulesh_cncStep_compute_gradients(u32 paramc, u64 paramv[], u32 depc, 
         vector *_item;
         neighbor_velocity = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1150,6 +1199,7 @@ ocrGuid_t _lulesh_cncStep_compute_gradients(u32 paramc, u64 paramv[], u32 depc, 
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1245,7 +1295,9 @@ void cncPrescribe_compute_gradients(cncTag_t iteration, cncTag_t element_id, lul
 
 /* compute_viscosity_terms setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_viscosity_terms(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1254,15 +1306,19 @@ ocrGuid_t _lulesh_cncStep_compute_viscosity_terms(u32 paramc, u64 paramv[], u32 
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double volume_derivative;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume_derivative = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector position_gradient;
+    ocxxr_add_db(&depv[_edtSlot]);
     position_gradient = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector velocity_gradient;
+    ocxxr_add_db(&depv[_edtSlot]);
     velocity_gradient = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vector *neighbor_velocity_gradient;
@@ -1273,6 +1329,7 @@ ocrGuid_t _lulesh_cncStep_compute_viscosity_terms(u32 paramc, u64 paramv[], u32 
         vector *_item;
         neighbor_velocity_gradient = _cncRangedInputAlloc(1, _dims, sizeof(vector ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vector *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1299,6 +1356,7 @@ ocrGuid_t _lulesh_cncStep_compute_viscosity_terms(u32 paramc, u64 paramv[], u32 
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1403,7 +1461,9 @@ void cncPrescribe_compute_viscosity_terms(cncTag_t iteration, cncTag_t element_i
 
 /* compute_energy setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_energy(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1412,24 +1472,31 @@ ocrGuid_t _lulesh_cncStep_compute_energy(u32 paramc, u64 paramv[], u32 depc, ocr
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double previous_volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double previous_energy;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_energy = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double previous_pressure;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_pressure = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double previous_viscosity;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_viscosity = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double qlin;
+    ocxxr_add_db(&depv[_edtSlot]);
     qlin = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double qquad;
+    ocxxr_add_db(&depv[_edtSlot]);
     qquad = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -1453,6 +1520,7 @@ ocrGuid_t _lulesh_cncStep_compute_energy(u32 paramc, u64 paramv[], u32 depc, ocr
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1566,7 +1634,9 @@ void cncPrescribe_compute_energy(cncTag_t iteration, cncTag_t element_id, lulesh
 
 /* compute_characteristic_length setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_characteristic_length(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1575,6 +1645,7 @@ ocrGuid_t _lulesh_cncStep_compute_characteristic_length(u32 paramc, u64 paramv[]
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double volume;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     vertex *neighbor_position;
@@ -1585,6 +1656,7 @@ ocrGuid_t _lulesh_cncStep_compute_characteristic_length(u32 paramc, u64 paramv[]
         vertex *_item;
         neighbor_position = _cncRangedInputAlloc(1, _dims, sizeof(vertex ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(vertex *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1611,6 +1683,7 @@ ocrGuid_t _lulesh_cncStep_compute_characteristic_length(u32 paramc, u64 paramv[]
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1697,7 +1770,9 @@ void cncPrescribe_compute_characteristic_length(cncTag_t iteration, cncTag_t ele
 
 /* compute_time_constraints setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_time_constraints(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1706,12 +1781,15 @@ ocrGuid_t _lulesh_cncStep_compute_time_constraints(u32 paramc, u64 paramv[], u32
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double sound_speed;
+    ocxxr_add_db(&depv[_edtSlot]);
     sound_speed = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double volume_derivative;
+    ocxxr_add_db(&depv[_edtSlot]);
     volume_derivative = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double characteristic_length;
+    ocxxr_add_db(&depv[_edtSlot]);
     characteristic_length = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -1735,6 +1813,7 @@ ocrGuid_t _lulesh_cncStep_compute_time_constraints(u32 paramc, u64 paramv[], u32
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1824,7 +1903,9 @@ void cncPrescribe_compute_time_constraints(cncTag_t iteration, cncTag_t element_
 
 /* compute_delta_time setup/teardown function */
 ocrGuid_t _lulesh_cncStep_compute_delta_time(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1832,9 +1913,11 @@ ocrGuid_t _lulesh_cncStep_compute_delta_time(u32 paramc, u64 paramv[], u32 depc,
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double previous_delta_time;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_delta_time = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double previous_elapsed_time;
+    ocxxr_add_db(&depv[_edtSlot]);
     previous_elapsed_time = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     double *courant;
@@ -1845,6 +1928,7 @@ ocrGuid_t _lulesh_cncStep_compute_delta_time(u32 paramc, u64 paramv[], u32 depc,
         double *_item;
         courant = _cncRangedInputAlloc(1, _dims, sizeof(double ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            //ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1857,6 +1941,7 @@ ocrGuid_t _lulesh_cncStep_compute_delta_time(u32 paramc, u64 paramv[], u32 depc,
         double *_item;
         hydro = _cncRangedInputAlloc(1, _dims, sizeof(double ), (void**)&_item);
         for (_i=0; _i<_itemCount; _i++) {
+            //ocxxr_add_db(&depv[_edtSlot]);
             _item[_i] = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
         }
     }
@@ -1884,6 +1969,7 @@ ocrGuid_t _lulesh_cncStep_compute_delta_time(u32 paramc, u64 paramv[], u32 depc,
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 
@@ -1980,7 +2066,9 @@ void cncPrescribe_compute_delta_time(cncTag_t iteration, luleshCtx *ctx) {
 
 /* produce_output setup/teardown function */
 ocrGuid_t _lulesh_cncStep_produce_output(u32 paramc, u64 paramv[], u32 depc, ocrEdtDep_t depv[]) {
+    ocxxr_start_task();
     luleshCtx *ctx = depv[0].ptr;
+    ocxxr_add_db(&depv[0]);
 
     u64 *_tag = paramv; MAYBE_UNUSED(_tag);
     const cncTag_t iteration = (cncTag_t)_tag[0]; MAYBE_UNUSED(iteration);
@@ -1988,6 +2076,7 @@ ocrGuid_t _lulesh_cncStep_produce_output(u32 paramc, u64 paramv[], u32 depc, ocr
     s32 _edtSlot = 1; MAYBE_UNUSED(_edtSlot);
 
     double final_energy;
+    ocxxr_add_db(&depv[_edtSlot]);
     final_energy = *(double *)_cncItemDataPtr(depv[_edtSlot++].ptr);
 
     #ifdef CNC_DEBUG_LOG
@@ -2011,6 +2100,7 @@ ocrGuid_t _lulesh_cncStep_produce_output(u32 paramc, u64 paramv[], u32 depc, ocr
     #ifdef CNC_DEBUG_LOG
         pthread_mutex_unlock(&_cncDebugMutex);
     #endif
+    ocxxr_end_task();
     return NULL_GUID;
 }
 

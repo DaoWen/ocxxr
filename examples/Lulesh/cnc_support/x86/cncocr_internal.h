@@ -149,6 +149,11 @@ static inline ocrHint_t *_cncCurrentEdtAffinityHint(ocrHint_t *hint) {
     return _cncEdtAffinityHint(hint, _cncCurrentAffinity());
 }
 
+void ocxxr_start_task(void);
+void ocxxr_end_task(void);
+void ocxxr_add_db(ocrEdtDep_t *dep);
+void ocxxr_remove_db(ocrEdtDep_t *dep);
+
 #ifdef CNC_AFFINITIES
 #define _CNC_CTX_OFFSET(ctx, field) ((u8*)(&(ctx)->field) - (u8*)(ctx))
 #define _CNC_ITEM_COLL_HANDLE(ctx, collName, loc) ((cncItemCollHandle_t){\

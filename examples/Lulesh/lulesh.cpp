@@ -136,7 +136,6 @@ void lulesh_cncInitialize(luleshArgs *args, luleshCtx *ctx0) {
 void lulesh_cncFinalize(double final_origin_energy, luleshCtx *ctx0) {
 	printf("\nDomain Size = %d\n", EDGE_ELEMENTS);
 	printf("Final Origin Energy =  %2.6e\n", final_origin_energy);
-
 }
 
 
