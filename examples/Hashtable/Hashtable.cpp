@@ -398,7 +398,6 @@ class Hashtable {
             bucket.Release();
         }
         buckets_ = buckets;
-        buckets.Release();
     }
 
  private:
