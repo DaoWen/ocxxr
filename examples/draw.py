@@ -6,6 +6,7 @@ import os
 import palettable
 import scipy as sp
 import scipy.stats
+import sys
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
@@ -16,8 +17,12 @@ from toolz.itertoolz import groupby
 from operator import itemgetter
 from csv import DictReader
 
+if (len(sys.argv) < 2):
+    print "python draw.py 'input file name'"
+    sys.exit(1)
+
 base_line_index = 0
-input = 'result.dat'
+input = sys.argv[1]
 f = open(input, 'r')
 legends = f.readline().strip().split(' ');
 raw = {}
@@ -80,6 +85,6 @@ ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Slowdown")
 plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.4), ncol=2).draw_frame(False)
-plt.savefig(filename + '.pdf', bbox_inches='tight', format='pdf')
+plt.savefig(input[: input.rfind('.')] + '.pdf', bbox_inches='tight', format='pdf')
 
 

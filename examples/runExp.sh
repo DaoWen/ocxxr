@@ -45,9 +45,9 @@ for d in $BENCHMARKS; do
         exit 1
     fi
 done
-
-export OUTPUT_FILE=$PWD/result.dat
-
+export NOW=$(date +"%F-%T")
+export OUTPUT_FILE="$PWD/result-$NOW.dat"
+echo $OUTPUT_FILE
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
     echo "native position_independent sanity_check" >> $OUTPUT_FILE
@@ -64,7 +64,7 @@ if [ "$EXPERIMENT_TYPE" = "time" ]; then
     printf "\n\n--------------------Sanity Check--------------------\n"
     run_benchmarks "sanity_check" "-DSANITY_CHECK=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
     # plot
-    python draw.py
+    python draw.py $OUTPUT_FILE
 elif [ "$EXPERIMENT_TYPE" = "op-count" ]; then
     rm -f $OUTPUT_FILE
     BASE_FLAGS="-DINSTRUMENT_POINTER_OP=1"
@@ -92,7 +92,7 @@ elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
     # based db pointer version
     printf "\n\n--------------------Based Db Pointers--------------------\n"
     run_benchmarks "based_db" "-DBT_PTR_TYPE=BasedDbPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
-    python draw2.py
+    python draw2.py $OUTPUT_FILE
 else
     echo "Please specify experiment name: [time|op-count|bt-variants]"
 fi
