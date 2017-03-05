@@ -316,7 +316,8 @@ struct HashtableHelper {
         // find the the bucket index
         // TODO - switch to std::hash
         u64 hash = std::hash<K>{}(params->key);
-        u32 index = hash % kHashBucketCount;
+        u32 index = static_cast<u32>(hash) % kHashBucketCount;
+        assert(index < kHashBucketCount);
         if (kHashtableVerbose) {
             PRINTF("Hashed to bucket %u...\n", index);
         }
