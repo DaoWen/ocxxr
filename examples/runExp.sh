@@ -5,7 +5,7 @@ set -e
 # defaults
 [ -z $XSTG_ROOT ] && export XSTG_ROOT=$(cd ../.. && pwd)
 [ -z $OCR_INSTALL_ROOT ] && export OCR_INSTALL_ROOT=$XSTG_ROOT/ocr/ocr/install
-
+[ -z $OCXXR_LIB_ROOT ] && export OCXXR_LIB_ROOT=$XSTG_ROOT/ocxxr
 run_benchmarks() {
     # arguments
     local label=$1
@@ -52,7 +52,7 @@ if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
     echo "native position_independent" >> $OUTPUT_FILE
     BASE_FLAGS="-DMEASURE_TIME=1"
-    ITERS=10
+    ITERS=100
     AWK_CMD='/elapsed time:/ { print $3 }'
     # original version
     printf "\n\n--------------------Position Independent Pointers--------------------\n"
