@@ -19,56 +19,46 @@ if (len(sys.argv) < 2):
     print "python draw.py 'input file name'"
     sys.exit(1)
 
-base_line_name="native"
 input = sys.argv[1]
 f = open(input, 'r')
-legends = f.readline().strip().split(' ');
+benchmarks = []
 raw = {}
-datas = {}
-datas['mean'] = {}
-datas['error'] = {}
-
-for legend in legends:
-    raw[legend] = []
+keys = ['bp_set_count', 'bp_get_count', 'bp_total', 'rp_set_count', 'rp_get_count', 'rp_total']
+legends = ['Base Pointer Initialization', 'Based Pointer Dereference', 'Based Pointer Total', 'Relative Pointer Initialization', 'Relative Pointer Dereference', 'Relative Pointer Total']
+for key in keys:
+    raw[key] = []
 
 for line in f:
     line = line.strip();
-    elems = line.split(" ")
+    elems = line.split(' ')
     if (elems[0] == '#'):
-        currentArray = raw[elems[2]]
-    else:
-        currentArray.append(float(line));
+        benchmarks.append(elems[1])
+    elif (elems[0] in raw):
+        raw[elems[0]].append(float(elems[1]));
 
-for key, value in raw.items():
-    datas['mean'][key] = np.array(value).mean();
+raw['bp_total'] = np.array(raw['bp_get_count']) + np.array(raw['bp_set_count'])
+raw['rp_total'] = np.array(raw['rp_get_count']) + np.array(raw['rp_set_count'])
 
-base_line = datas['mean'][base_line_name]
-for key, value in datas['mean'].items():
-    datas['mean'][key] /= base_line
-for key, value in raw.items():
-    standard_error = np.std(np.array(value) / base_line) / np.sqrt(len(value))
-    datas['error'][key] = [[standard_error], [standard_error]]
-    #datas['error'][key] = standard_error
-
+#yindex = np.arange(6)
 fig, ax = plt.subplots(1)
-fig.set_size_inches(4.0,3.5)
-filename = os.path.splitext(os.path.basename(__file__))[0]
+fig.set_size_inches(8.0,3.5)
+#plt.semilogy(yindex, np.exp(yindex))
+#filename = os.path.splitext(os.path.basename(__file__))[0]
 
-W = 0.5
+W = 0.2
 colors = palettable.tableau.Gray_5.mpl_colors
-errkw=dict(ecolor='black', lw=2, capthick=1)
 
 
 rects = []
+index = np.arange(len(benchmarks)) * 1.5
+for i, key in enumerate(keys):
+    rects.append(ax.bar(index + i * W, raw[key], W, color=colors[0], log=True))
 
-for i, legend in enumerate(legends):
-    rects.append(ax.bar(i + W, datas['mean'][legend], W, color=colors[0], yerr=datas['error'][legend], error_kw=errkw))
-
-ax.set_xticks(np.arange(len(legends)) + W)
-ax.set_xticklabels(legends)
+ax.set_xticks(index + W)
+ax.set_xticklabels(benchmarks)
 plt.xlabel("Pointer Type")
 plt.ylabel("Slowdown")
-#plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.3), ncol=2).draw_frame(False)
+plt.legend(rects, legends, loc='lower left', bbox_to_anchor=(0, -0.5), ncol=2).draw_frame(False)
 plt.savefig(input[: input.rfind('.')] +'.pdf', bbox_inches='tight', format='pdf')
 
 

@@ -47,7 +47,7 @@ for d in $BENCHMARKS; do
 done
 export NOW=$(date +"%F-%T")
 export OUTPUT_FILE="$PWD/result-$NOW.dat"
-echo $OUTPUT_FILE
+$echo $OUTPUT_FILE
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
     echo "native position_independent sanity_check" >> $OUTPUT_FILE
@@ -73,6 +73,7 @@ elif [ "$EXPERIMENT_TYPE" = "op-count" ]; then
     # instrumented version
     printf "\n\n--------------------Count Operations--------------------\n"
     run_benchmarks "op count" "$BASE_FLAGS" "$AWK_CMD" $ITERS
+    python draw2.py $OUTPUT_FILE
 elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
     rm -f $OUTPUT_FILE
     BENCHMARKS="BinaryTree"
@@ -92,7 +93,7 @@ elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
     # based db pointer version
     printf "\n\n--------------------Based Db Pointers--------------------\n"
     run_benchmarks "based_db" "-DBT_PTR_TYPE=BasedDbPtr $BASE_FLAGS" "$AWK_CMD" $ITERS
-    python draw2.py $OUTPUT_FILE
+    python draw3.py $OUTPUT_FILE
 else
     echo "Please specify experiment name: [time|op-count|bt-variants]"
 fi
