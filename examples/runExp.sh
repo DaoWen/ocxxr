@@ -50,9 +50,9 @@ export OUTPUT_FILE=$PWD/result.dat
 
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE
-    echo "native position_independent" >> $OUTPUT_FILE
+    echo "native position_independent sanity_check" >> $OUTPUT_FILE
     BASE_FLAGS="-DMEASURE_TIME=1"
-    ITERS=100
+    ITERS=10
     AWK_CMD='/elapsed time:/ { print $3 }'
     # original version
     printf "\n\n--------------------Position Independent Pointers--------------------\n"
@@ -60,6 +60,9 @@ if [ "$EXPERIMENT_TYPE" = "time" ]; then
     # native pointer version
     printf "\n\n--------------------Native Pointers--------------------\n"
     run_benchmarks "native" "-DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
+	# sanity check version
+	printf "\n\n--------------------Sanity Check--------------------\n"
+    run_benchmarks "sanity_check" "-DSANITY_CHECK=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
     # plot
     python draw.py
 elif [ "$EXPERIMENT_TYPE" = "op-count" ]; then
