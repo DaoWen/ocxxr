@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import palettable
+import scipy as sp
+import scipy.stats
 
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
@@ -38,6 +40,14 @@ for line in f:
     else:
         currentArray.append(float(line));
 
+# from http://stackoverflow.com/a/15034143/1427124
+def confidence_interval(data, confidence=0.95):
+    a = 1.0*np.array(data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    return h
+
 for key, value in raw.items():
     datas['mean'][key] = np.array([np.array(value[benchmark]).mean() for benchmark in benchmarks])
 
@@ -46,7 +56,9 @@ for key, value in datas['mean'].items():
     datas['mean'][key] = np.array(value) / np.array(base_line)
 
 for key, value in raw.items():
-    standard_error = np.array([np.std(np.array(value[benchmark]) / base_line[i]) / np.sqrt(len(value[benchmark])) for i, benchmark in enumerate(benchmarks)])
+    standard_error = np.array(
+            [confidence_interval(np.array(value[benchmark])) / base_line[i]
+                for i, benchmark in enumerate(benchmarks)])
     datas['error'][key] = [standard_error, standard_error]
 
 fig, ax = plt.subplots(1)
@@ -58,7 +70,6 @@ W = 0.25
 colors = palettable.tableau.Gray_5.mpl_colors
 errkw=dict(ecolor='black', lw=2, capthick=1)
 
-
 rects = []
 
 for i, legend in enumerate(legends):
@@ -69,6 +80,6 @@ ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Slowdown")
 plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.4), ncol=2).draw_frame(False)
-plt.savefig(filename + '.eps', bbox_inches='tight', format='eps')
+plt.savefig(filename + '.pdf', bbox_inches='tight', format='pdf')
 
 
