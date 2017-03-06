@@ -16,7 +16,6 @@ inline double __attribute__((always_inline)) cbrt(double x) {
     }
     return ans;
 }
-extern void *memset(void *s, int c, size_t n);
 // Smaller problem size for TG
 #define EDGE_ELEMENTS 2
 #else
