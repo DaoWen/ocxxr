@@ -80,7 +80,7 @@ rects = []
 for i, legend in enumerate(legends):
     rects.append(ax.bar(ind + i * W, datas['mean'][legend], W, color=colors[i], yerr=datas['error'][legend], error_kw=errkw))
 
-ax.set_xticks(ind + W / 2)
+ax.set_xticks(ind + W * (len(rects) / 2))
 ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Slowdown")

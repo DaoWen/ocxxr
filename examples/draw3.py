@@ -54,7 +54,7 @@ fig, ax = plt.subplots(1)
 fig.set_size_inches(4.0,3.5)
 filename = os.path.splitext(os.path.basename(__file__))[0]
 
-W = 0.5
+W = 0.4
 colors = palettable.tableau.Gray_5.mpl_colors
 errkw=dict(ecolor='black', lw=2, capthick=1)
 
@@ -62,9 +62,8 @@ errkw=dict(ecolor='black', lw=2, capthick=1)
 rects = []
 
 for i, legend in enumerate(legends):
-    rects.append(ax.bar(i + W, datas['mean'][legend], W, color=colors[0], yerr=datas['error'][legend], error_kw=errkw))
-
-ax.set_xticks(np.arange(len(legends)) + W)
+    rects.append(ax.bar(i, datas['mean'][legend], W, color=colors[0], yerr=datas['error'][legend], error_kw=errkw))
+ax.set_xticks(np.arange(len(legends)))
 ax.set_xticklabels(legends)
 plt.xlabel("Pointer Type")
 plt.ylabel("Slowdown")

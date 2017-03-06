@@ -56,7 +56,7 @@ index = np.arange(len(benchmarks)) * 1.5
 for i, key in enumerate(keys):
     rects.append(ax.bar(index + i * W, raw[key], W, color=colors[i], bottom=0.001, log=True))
 
-ax.set_xticks(index + W)
+ax.set_xticks(index + (len(keys) / 2) * W)
 ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Frequency(op/ms)")
