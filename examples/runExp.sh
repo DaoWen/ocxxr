@@ -44,8 +44,7 @@ export EXPERIMENT_TYPE="$1"
 
 # Which benchmarks to run?
 if [ -z "$2" ]; then
-   # export BENCHMARKS="BinaryTree Hashtable Tempest Lulesh UTS"
-    export BENCHMARKS="BinaryTree Hashtable Tempest UTS"
+    export BENCHMARKS="BinaryTree Hashtable Tempest Lulesh UTS"
 else
     export BENCHMARKS="$2"
 fi
