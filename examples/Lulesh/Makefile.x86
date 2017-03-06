@@ -8,7 +8,7 @@ TARGET := lulesh
 CFLAGS += -O2
 
 # Enable CnC assertions and runtime sanity checks
-CFLAGS += -g -DCNC_DEBUG
+#CFLAGS += -g -DCNC_DEBUG
 
 # Enable debug logging for x86 (also serializes step execution)
 #CFLAGS += -DCNC_DEBUG_LOG=\"./cnc_events.log\"
