@@ -46,7 +46,7 @@ base_line = datas['mean'][base_line_name]
 for key, value in datas['mean'].items():
     datas['mean'][key] /= base_line
 for key, value in raw.items():
-    standard_error = np.std(np.array(value) / base_line) / np.sqrt(len(value))
+    standard_error = np.std(np.array(value)) * 2 / base_line
     datas['error'][key] = [[standard_error], [standard_error]]
     #datas['error'][key] = standard_error
 

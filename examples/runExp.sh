@@ -44,7 +44,7 @@ export EXPERIMENT_TYPE="$1"
 
 # Which benchmarks to run?
 if [ -z "$2" ]; then
-    export BENCHMARKS="BinaryTree Hashtable Tempest Lulesh UTS"
+    export BENCHMARKS="BinaryTree Hashtable Lulesh Tempest UTS"
 else
     export BENCHMARKS="$2"
 fi
@@ -67,7 +67,7 @@ if [ "$EXPERIMENT_TYPE" = "time" ]; then
     rm -f $OUTPUT_FILE $LOG_FILE
     echo "native position_independent sanity_check" >> $OUTPUT_FILE
     BASE_FLAGS="-DMEASURE_TIME=1"
-    ITERS=10
+    ITERS=100
     AWK_CMD='/elapsed time:/ { print $3 }'
     # native pointer version
     printf "\n\n--------------------Native Pointers--------------------\n" | tee -a $LOG_FILE
@@ -108,7 +108,7 @@ elif [ "$EXPERIMENT_TYPE" = "bt-variants" ]; then
     rm -f $OUTPUT_FILE
     BENCHMARKS="BinaryTree"
     BASE_FLAGS="-DMEASURE_TIME=1"
-    ITERS=10
+    ITERS=100
     AWK_CMD='/elapsed time:/ { print $3 }'
     echo "native relative based based_db" >> $OUTPUT_FILE
     # native pointer version

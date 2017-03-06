@@ -46,16 +46,18 @@ for line in f:
         currentArray.append(float(line));
 
 # from http://stackoverflow.com/a/15034143/1427124
-def confidence_interval(data, confidence=0.95):
+def confidence_interval(data, confidence=0.98):
     a = 1.0*np.array(data)
     n = len(a)
-    m, se = np.mean(a), scipy.stats.sem(a)
-    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
-    return h
+    #m, se = np.mean(a), scipy.stats.sem(a)
+    #h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    se = np.std(a) * 2
+    return se
 
 for key, value in raw.items():
     datas['mean'][key] = np.array([np.array(value[benchmark]).mean() for benchmark in benchmarks])
-
+print datas['mean']
+print benchmarks
 base_line = [x for x in datas['mean'][legends[base_line_index]]]
 for key, value in datas['mean'].items():
     datas['mean'][key] = np.array(value) / np.array(base_line)

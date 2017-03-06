@@ -38,8 +38,10 @@ for line in f:
 
 raw['bp_total'] = np.array(raw['bp_get_count']) + np.array(raw['bp_set_count'])
 raw['rp_total'] = np.array(raw['rp_get_count']) + np.array(raw['rp_set_count'])
-raw['get'] = np.array(raw['bp_get_count']) + np.array(raw['rp_get_count'])
-raw['set'] = np.array(raw['bp_set_count']) + np.array(raw['rp_set_count'])
+execution_time= np.array([1.15358956,  4.30469096,  1.34886492,  3.53642811,  2.64641254]) * 1000
+execution_time= np.array([1.15358956,  4.30469096,  3.53642811,  1.33340363,  2.64641254]) * 1000
+raw['get'] = (np.array(raw['bp_get_count']) + np.array(raw['rp_get_count'])) / execution_time
+raw['set'] = (np.array(raw['bp_set_count']) + np.array(raw['rp_set_count'])) / execution_time
 raw['total'] = raw['get'] + raw['set']
 keys = ['get', 'set', 'total']
 legends = ['Initialization', 'Dereference', 'Total'] 
@@ -51,6 +53,7 @@ W = 0.25
 colors = palettable.tableau.Gray_5.mpl_colors
 #colors = palettable.cmocean.sequential.Gray_20.mpl_colors
 
+print benchmarks
 rects = []
 index = np.arange(len(benchmarks)) * 1.5
 for i, key in enumerate(keys):
