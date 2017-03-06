@@ -20,7 +20,7 @@ run_benchmarks() {
     export OCR_TYPE=x86
     export V=1 # verbose OCR make
     export NO_DEBUG=yes
-    export CFLAGS="-O2 -DNDEBUG=1 $flags"
+    export CFLAGS="-O3 -DNDEBUG=1 $flags"
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
             printf "\n\n> Running test %s\n\n" $dir

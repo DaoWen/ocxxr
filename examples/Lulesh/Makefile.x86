@@ -5,7 +5,7 @@ TARGET := lulesh
 # DEBUG / OPTIMIZATION OPTIONS
 
 # Optimization flags
-CFLAGS += -O2
+CFLAGS += -O3
 
 # Enable CnC assertions and runtime sanity checks
 #CFLAGS += -g -DCNC_DEBUG
