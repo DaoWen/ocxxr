@@ -220,12 +220,6 @@ class BasedPtrImpl {
         } else if (embedded && ocrGuidIsUninitialized(target_guid_)) {
             // optimized case: treat as intra-datablock RelPtr
             ptrdiff_t target = internal::CombineBaseOffset(base_ptr(), offset_);
-#ifdef SANITY_CHECK
-            u64 db_size;
-            ptrdiff_t base = internal::AddressForGuid(target_guid_);
-            ocrDbGetSize(target_guid_, &db_size);
-            sanityCheck(base, db_size, target);
-#endif
             return reinterpret_cast<T *>(target);
         } else {
 // normal case: inter-datablock pointer
