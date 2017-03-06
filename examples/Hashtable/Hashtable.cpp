@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 
-
+u64 myhash(u64 x) { return x * 11400714819323198549UL; }
 
 enum HashtableOpRole {
     kRoleInvalid = 'X',
@@ -315,7 +315,7 @@ struct HashtableHelper {
         }
         // find the the bucket index
         // TODO - switch to std::hash
-        u64 hash = std::hash<K>{}(params->key);
+        u64 hash = myhash(params->key);
         u32 index = static_cast<u32>(hash) % kHashBucketCount;
         assert(index < kHashBucketCount);
         if (kHashtableVerbose) {
@@ -425,7 +425,7 @@ void FinalTask(ocxxr::Arena<void> table, ocxxr::Datablock<char> result,
     table.Destroy();  // FIXME - should do deep destroy
     char res_str[] = {*result ? *result : 'X', '\0'};
     PRINTF("Result = %s\n", res_str);
-	ocxxr::Shutdown();
+    ocxxr::Shutdown();
 }
 
 void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
@@ -445,14 +445,15 @@ void GetterTask(ocxxr::Arena<Hashtable<u64, char>> table, ocxxr::NullHandle) {
 
 struct CreateTaskParam {
     u64 start;
-	u64 end;
-	ocxxr::Event<void> sync;
+    u64 end;
+    ocxxr::Event<void> sync;
 };
 
-void CreateBlockTask(CreateTaskParam param, ocxxr::Arena<Hashtable<u64, char>> table) {
+void CreateBlockTask(CreateTaskParam param,
+                     ocxxr::Arena<Hashtable<u64, char>> table) {
     for (u64 i = param.start; i < param.end; i++) {
-	    table->Put(i, static_cast<char>('a' + i), param.sync);
-	}
+        table->Put(i, static_cast<char>('a' + i), param.sync);
+    }
 }
 
 void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
@@ -466,7 +467,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 
     auto table = Hashtable<u64, char>::Create();
 
-   	u64 kPutCount = n;
+    u64 kPutCount = n;
     auto puts_latch = ocxxr::LatchEvent<void>::Create(kPutCount);
 
     auto getter_template = OCXXR_TEMPLATE_FOR(GetterTask);
@@ -477,16 +478,17 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
         PRINTF("Starting puts\n");
     }
     u64 blockSize = 5000;
-	auto create_task_template = OCXXR_TEMPLATE_FOR(CreateBlockTask);
-	for (u64 i = 0; i < kPutCount / blockSize; i++) {
-		CreateTaskParam param = {i * blockSize, (i + 1) * blockSize, puts_latch};
-		create_task_template().CreateTask(param, table);	
-	}
-	create_task_template.Destroy();
+    auto create_task_template = OCXXR_TEMPLATE_FOR(CreateBlockTask);
+    for (u64 i = 0; i < kPutCount / blockSize; i++) {
+        CreateTaskParam param = {i * blockSize, (i + 1) * blockSize,
+                                 puts_latch};
+        create_task_template().CreateTask(param, table);
+    }
+    create_task_template.Destroy();
 
-//    for (u64 i = 0; i < kPutCount; i++) {
-//        table->Put(i, static_cast<char>('a' + i), puts_latch);
-//    }
+    //    for (u64 i = 0; i < kPutCount; i++) {
+    //        table->Put(i, static_cast<char>('a' + i), puts_latch);
+    //    }
     if (kHashtableVerbose) {
         PRINTF("Done with puts\n");
     }
