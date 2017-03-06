@@ -8,21 +8,14 @@
 
 #include <cstdlib>
 
-
-
 constexpr bool kVerboseMessages = false;
 
 #ifndef BT_PTR_TYPE
 #define BT_PTR_TYPE RelPtr
 #endif
-#ifndef BT_ARG_PTR_TYPE
-#define BT_ARG_PTR_TYPE BasedPtr
-#endif
 
 template <typename T>
 using Ptr = ocxxr::BT_PTR_TYPE<T>;
-template <typename T>
-using ArgPtr = ocxxr::BT_ARG_PTR_TYPE<T>;
 
 template <typename K, typename V>
 class BinaryTree {
@@ -88,7 +81,7 @@ class BinaryTree {
         }
     };
 
-    bool Find(const K &key, ArgPtr<Node> node, V &output) {
+    bool Find(const K &key, Node *node, V &output) {
         if (!node) {
             // Base case 1: not found
             return false;
@@ -104,18 +97,9 @@ class BinaryTree {
     };
 };
 
-u64 myhash(u64 x) {
-    return x * 11400714819323198549UL;
-}
+u64 myhash(u64 x) { return x * 11400714819323198549UL; }
 
-void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
-    u32 n;
-    if (args->argc() != 2) {
-        n = 100000;
-        PRINTF("Usage: BinaryTree <num>, defaulting to %" PRIu32 "\n", n);
-    } else {
-        n = atoi(args->argv(1));
-    }
+void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>) {
 
     auto tree = BinaryTree<u64, char>::Create();
 
@@ -123,14 +107,14 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
     // Puts
     //
 
-    constexpr u64 kPutCount = 10000000;
+    constexpr u64 kPutCount = 10'000'000;
 
     if (kVerboseMessages) {
         PRINTF("Starting puts\n");
     }
 
     for (u64 i = 0; i < kPutCount; i++) {
-        tree->Put(myhash(i), static_cast<char>('a' + i%26));
+        tree->Put(myhash(i), static_cast<char>('a' + i % 26));
     }
 
     if (kVerboseMessages) {
@@ -147,7 +131,7 @@ void ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs> args) {
 
     char result[] = {'X', '\0'};
     // Compute an index that should give us the value 'g'
-    constexpr u64 index = 26 * (kPutCount/32) + 6;
+    constexpr u64 index = 26 * (kPutCount / 32) + 6;
     tree->Get(myhash(index), result[0]);
 
     if (kVerboseMessages) {
