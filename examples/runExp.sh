@@ -2,6 +2,7 @@
 
 set -e
 
+
 # defaults
 [ -z $XSTG_ROOT ] && export XSTG_ROOT=$(cd ../.. && pwd)
 [ -z $OCR_INSTALL_ROOT ] && export OCR_INSTALL_ROOT=$XSTG_ROOT/ocr/ocr/install
@@ -21,6 +22,8 @@ run_benchmarks() {
     export V=1 # verbose OCR make
     export NO_DEBUG=yes
     export CFLAGS="-O3 -DNDEBUG=1 $flags"
+    export CC=clang
+    export CXX=clang++
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
             printf "\n\n> Running test %s\n\n" $dir
