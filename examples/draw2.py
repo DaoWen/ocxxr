@@ -38,7 +38,7 @@ for line in f:
 
 raw['bp_total'] = np.array(raw['bp_get_count']) + np.array(raw['bp_set_count'])
 raw['rp_total'] = np.array(raw['rp_get_count']) + np.array(raw['rp_set_count'])
-execution_time= np.array([1.15358956,  4.30469096,  1.34886492,  3.53642811,  2.64641254]) * 1000
+#execution_time= np.array([1.15358956,  4.30469096,  1.34886492,  3.53642811,  2.64641254]) * 1000
 execution_time= np.array([1.15358956,  4.30469096,  3.53642811,  1.33340363,  2.64641254]) * 1000
 raw['get'] = (np.array(raw['bp_get_count']) + np.array(raw['rp_get_count'])) / execution_time
 raw['set'] = (np.array(raw['bp_set_count']) + np.array(raw['rp_set_count'])) / execution_time

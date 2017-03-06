@@ -51,20 +51,20 @@ for key, value in raw.items():
     #datas['error'][key] = standard_error
 
 fig, ax = plt.subplots(1)
-fig.set_size_inches(4.0,3.5)
+fig.set_size_inches(4.0, 2.33)
 filename = os.path.splitext(os.path.basename(__file__))[0]
 
-W = 0.4
+W = 0.5
 colors = palettable.tableau.Gray_5.mpl_colors
 errkw=dict(ecolor='black', lw=2, capthick=1)
 
 
 rects = []
-
+legend_name = ['Native', 'RelPtr', 'BasedPtr', 'BasedDbPtr']
 for i, legend in enumerate(legends):
     rects.append(ax.bar(i, datas['mean'][legend], W, color=colors[0], yerr=datas['error'][legend], error_kw=errkw))
 ax.set_xticks(np.arange(len(legends)))
-ax.set_xticklabels(legends)
+ax.set_xticklabels(legend_name)
 plt.xlabel("Pointer Type")
 plt.ylabel("Slowdown")
 #plt.legend(rects, map(lambda x: x.replace('_', ' ').title() + " Pointers", legends), loc='lower left', bbox_to_anchor=(0, -0.3), ncol=2).draw_frame(False)
