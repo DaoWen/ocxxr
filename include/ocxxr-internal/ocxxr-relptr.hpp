@@ -96,6 +96,7 @@ class BasedPtrImpl {
         return get();
     }
 
+#if 0 // shoudln't need this?
     template <typename U = T, EnableIfNotVoid<U> = 0>
     U &operator[](const int index) const {
 #ifdef INSTRUMENT_POINTER_OP
@@ -103,6 +104,7 @@ class BasedPtrImpl {
 #endif
         return get()[index];
     }
+#endif
 
     operator T *() const {
 #ifdef INSTRUMENT_POINTER_OP
@@ -310,6 +312,7 @@ class RelPtr {
         return get();
     }
 
+#if 0 // shoudln't need this?
     template <typename U = T, internal::EnableIfNotVoid<U> = 0>
     U &operator[](const int index) const {
 #ifdef INSTRUMENT_POINTER_OP
@@ -317,6 +320,7 @@ class RelPtr {
 #endif
         return get()[index];
     }
+#endif
 
     operator T *() const {
 #ifdef INSTRUMENT_POINTER_OP
