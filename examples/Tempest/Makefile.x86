@@ -1,5 +1,3 @@
-.PHONY: default
-
 export OCR_TYPE := x86
 
 CFLAGS += -DUSE_OCR=1 -DUSE_OCR_TEST=1
@@ -9,13 +7,17 @@ export CFLAGS
 debug: CFLAGS += -g -O0
 debug: run
 
-run: lib
+.PHONY: lib install
+
+install: lib
+	make -C test/hpc -f Makefile.x86 $@
+
+run: lib install
 	make -C test/hpc -f Makefile.x86 $@
 
 clean:
 	make -C test/hpc -f Makefile.x86 $@
 	make clean
 
-.PHONY: lib
 lib:
 	make

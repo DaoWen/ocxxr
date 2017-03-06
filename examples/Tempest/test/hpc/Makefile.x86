@@ -80,10 +80,9 @@ TARGET := DataContainerDbAlloc
 SRCS :=  $(TARGET).cpp ../ocr-dballoc/src/ocr_db_alloc.cpp
 CONFIG_FLAGS := --guid LABELED
 OBJS := $(notdir $(SRCS:.cpp=.o))
-#CFLAGS += -O0 -g -I${TEMPESTBASEDIR}/include
-CFLAGS += -O0 -g  -std=c++11 -g -DUSE_OCR -I${TEMPESTBASEDIR}/include
+CFLAGS += -std=c++14 -DUSE_OCR -I${TEMPESTBASEDIR}/include
 CFLAGS += -I../ocr-dballoc/include -I$(OCXXR_LIB_ROOT)/include
-CFLAGS += -g -DUSE_OCR_TEST
+CFLAGS += -DUSE_OCR_TEST
 LDFLAGS := -lpthread -lm -L$(TEMPESTLIBS) -lhardcoreatm -ltempestbase  -locr_$(OCR_TYPE) -lnetcdf -lnetcdf_c++ -llapack -lblas
 
 # Targets:
@@ -91,11 +90,11 @@ LDFLAGS := -lpthread -lm -L$(TEMPESTLIBS) -lhardcoreatm -ltempestbase  -locr_$(O
 #   - debug:   Build the debug version of the application
 #   - install: Build and install
 #   - run:     Run the application
-all:	CFLAGS += -O0 -fno-inline
+all:	CFLAGS += -O2
 all:	TARGETS := all
 all:	default
 
-debug:	CFLAGS += -O0
+debug:	CFLAGS += -g -O0 -fno-inline
 debug:	TARGETS := debug
 debug:	default
 
