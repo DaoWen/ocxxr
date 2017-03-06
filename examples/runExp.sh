@@ -16,16 +16,22 @@ run_benchmarks() {
     local thread_num=1
     # go!
     #echo "$label" >> $OUTPUT_FILE
+    export CONFIG_NUM_THREADS=$thread_num
+    export OCR_TYPE=x86
+    export V=1 # verbose OCR make
+    export NO_DEBUG=yes
+    export CFLAGS="-O2 -DNDEBUG=1 $flags"
     for dir in $BENCHMARKS; do
         if [ -d "$dir" ] && [ $dir != "makefiles" ]; then
             printf "\n\n> Running test %s\n\n" $dir
-            echo "# $dir $label" >> $OUTPUT_FILE
+            echo "# $dir $label" | tee -a $LOG_FILE >> $OUTPUT_FILE
             pushd $dir > /dev/null
-            make -f Makefile.x86 clean
+            make -f Makefile.x86 clean install | tee -a $LOG_FILE
             for ((index = 0; index < iterations; index++)); do
-                CONFIG_NUM_THREADS=$thread_num NO_DEBUG=yes OCR_TYPE=x86 CFLAGS="-DNDEBUG=1 $flags" \
-                    make -f Makefile.x86 run | awk "$awk_cmd" >> $OUTPUT_FILE
+                make -f Makefile.x86 run | tee -a $LOG_FILE | awk "$awk_cmd" >> $OUTPUT_FILE
+                printf "."
             done
+            printf "\n"
             popd > /dev/null
         fi
     done
@@ -45,23 +51,25 @@ for d in $BENCHMARKS; do
         exit 1
     fi
 done
+
 export NOW=$(date +"%F-%T")
 export OUTPUT_FILE="$PWD/result-$NOW.dat"
-#echo $OUTPUT_FILE
+export LOG_FILE=$PWD/result-$NOW.log
+
 if [ "$EXPERIMENT_TYPE" = "time" ]; then
-    rm -f $OUTPUT_FILE
+    rm -f $OUTPUT_FILE $LOG_FILE
     echo "native position_independent sanity_check" >> $OUTPUT_FILE
     BASE_FLAGS="-DMEASURE_TIME=1"
     ITERS=10
     AWK_CMD='/elapsed time:/ { print $3 }'
-    # original version
-    printf "\n\n--------------------Position Independent Pointers--------------------\n"
-    run_benchmarks "position_independent" "$BASE_FLAGS" "$AWK_CMD" $ITERS
     # native pointer version
-    printf "\n\n--------------------Native Pointers--------------------\n"
+    printf "\n\n--------------------Native Pointers--------------------\n" | tee -a $LOG_FILE
     run_benchmarks "native" "-DOCXXR_USE_NATIVE_POINTERS=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
+    # original version
+    printf "\n\n--------------------Position Independent Pointers--------------------\n" | tee -a $LOG_FILE
+    run_benchmarks "position_independent" "$BASE_FLAGS" "$AWK_CMD" $ITERS
     # sanity check version
-    printf "\n\n--------------------Sanity Check--------------------\n"
+    printf "\n\n--------------------Sanity Check--------------------\n" | tee -a $LOG_FILE
     run_benchmarks "sanity_check" "-DSANITY_CHECK=1 $BASE_FLAGS" "$AWK_CMD" $ITERS
     # plot
     python draw.py $OUTPUT_FILE
