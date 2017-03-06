@@ -38,25 +38,29 @@ for line in f:
 
 raw['bp_total'] = np.array(raw['bp_get_count']) + np.array(raw['bp_set_count'])
 raw['rp_total'] = np.array(raw['rp_get_count']) + np.array(raw['rp_set_count'])
-
+raw['get'] = np.array(raw['bp_get_count']) + np.array(raw['rp_get_count'])
+raw['set'] = np.array(raw['bp_set_count']) + np.array(raw['rp_set_count'])
+raw['total'] = raw['get'] + raw['set']
+keys = ['get', 'set', 'total']
+legends = ['Initialization', 'Dereference', 'Total'] 
 fig, ax = plt.subplots(1)
-fig.set_size_inches(8.0,3.5)
+fig.set_size_inches(6.0,3.5)
 #filename = os.path.splitext(os.path.basename(__file__))[0]
 
-W = 0.2
-#colors = palettable.tableau.Gray_5.mpl_colors
-colors = palettable.cmocean.sequential.Gray_20.mpl_colors
+W = 0.25
+colors = palettable.tableau.Gray_5.mpl_colors
+#colors = palettable.cmocean.sequential.Gray_20.mpl_colors
 
 rects = []
 index = np.arange(len(benchmarks)) * 1.5
 for i, key in enumerate(keys):
-    rects.append(ax.bar(index + i * W, raw[key], W, color=colors[(i + 1) * 3], bottom=0.001, log=True))
+    rects.append(ax.bar(index + i * W, raw[key], W, color=colors[i], bottom=0.001, log=True))
 
 ax.set_xticks(index + W)
 ax.set_xticklabels(benchmarks)
 plt.xlabel("Benchmark")
 plt.ylabel("Frequency(op/ms)")
-plt.legend(rects, legends, loc='lower left', bbox_to_anchor=(0, -0.5), ncol=2).draw_frame(False)
+plt.legend(rects, legends, loc='lower left', bbox_to_anchor=(0, -0.3), ncol=3).draw_frame(False)
 plt.savefig(input[: input.rfind('.')] +'.pdf', bbox_inches='tight', format='pdf')
 
 
