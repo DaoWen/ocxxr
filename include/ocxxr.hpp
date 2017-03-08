@@ -11,7 +11,9 @@ extern "C" {
 #define ENABLE_EXTENSION_COUNTED_EVT
 #define ENABLE_EXTENSION_CHANNEL_EVT
 #define ENABLE_EXTENSION_LABELING
+#define ENABLE_EXTENSION_DB_INFO
 #include <ocr.h>
+#include <extensions/ocr-db-info.h>
 }
 
 #include <cassert>
