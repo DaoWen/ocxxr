@@ -213,7 +213,6 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
 //                   "is %lx, end is %lx\n",
 //                   db_size, source, dst_addr, target, i->base_addr(), end_addr);
         }
-#endif
         assert(i != a_end);
         assert(i->base_addr() <= dst_addr);
         assert(dst_addr <= end_addr);
@@ -221,6 +220,7 @@ inline void GuidOffsetForAddress(const void *target, const void *source,
         assert(i != a_end && i->base_addr() <= dst_addr &&
                dst_addr <= end_addr &&
                "Based pointer must point into an acquired datablock");
+#endif
         if (embedded && i->base_addr() <= src_addr && src_addr <= end_addr) {
             // optimized case: treat as intra-datablock RelPtr
             *guid_out = UNINITIALIZED_GUID;

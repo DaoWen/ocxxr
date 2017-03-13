@@ -117,7 +117,9 @@ class DatablockHandle : public DataHandle<T> {
     }
 
     /// Destroy this datablock.
-    void Destroy() const { internal::OK(ocrDbDestroy(this->guid())); }
+    void Destroy() const {
+     internal::OK(ocrDbDestroy(this->guid()));
+    }
 
  protected:
     explicit DatablockHandle(u64 count)
