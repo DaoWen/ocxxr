@@ -4,7 +4,7 @@
 
 extern "C" {
 ocrGuid_t mainEdt(u32 paramc, u64 /*paramv*/[], u32 depc, ocrEdtDep_t depv[]) {
-    assert(paramc == 0 && depc == 1);
+    ASSERT(paramc == 0 && depc == 1);
     ocxxr::internal::PushTaskState();
     ocxxr::Main(ocxxr::Datablock<ocxxr::MainTaskArgs>(depv[0]));
     ocxxr::internal::PopTaskState();
